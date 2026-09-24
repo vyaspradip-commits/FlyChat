@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0">
+
+    <title>Privacy | FlyChat</title>
+
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/privacy.css">
+
+</head>
+
+
+<body class="privacy-page">
+
+    <div class="privacy-container">
+
+        <h2>🔒 Privacy</h2>
+
+        <h3>Profile Visibility</h3>
+
+        <p>
+            Choose who can see your FlyChat profile.
+        </p>
+
+
+        <div class="privacy-option">
+
+            <input
+                type="radio"
+                name="profileVisibility"
+                id="visibilityEveryone"
+                value="everyone">
+
+            <label for="visibilityEveryone">
+                🌍 Everyone
+            </label>
+
+        </div>
+
+
+        <div class="privacy-option">
+
+            <input
+                type="radio"
+                name="profileVisibility"
+                id="visibilityContacts"
+                value="contacts">
+
+            <label for="visibilityContacts">
+                💬 People I have chatted with
+            </label>
+
+        </div>
+
+
+        <div class="privacy-option">
+
+            <input
+                type="radio"
+                name="profileVisibility"
+                id="visibilitySelected"
+                value="selected">
+
+            <label for="visibilitySelected">
+                👤 Selected Accounts
+            </label>
+
+        </div>
+
+
+        <div id="selectedUsersBox">
+
+            <h3>Select Accounts</h3>
+
+            <div id="privacyUserList">
+            </div>
+
+        </div>
+
+
+        <button
+            class="save-privacy-btn"
+            onclick="savePrivacy()">
+
+            Save Privacy
+
+        </button>
+
+
+        <button
+            class="back-privacy-btn"
+            onclick="window.location.href='settings.html'">
+
+            ← Back to Settings
+
+        </button>
+
+    </div>
+
+
+    <script src="js/utils.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/privacy.js"></script>
+    <script src="js/app.js"></script>
+
+</body>
+
+</html>

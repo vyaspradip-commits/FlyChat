@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width,initial-scale=1.0">
+        <title>Register | FlyChat</title>
+        <link rel="stylesheet" href="css/style.css">
+    </head>
+    <body class="register-page">
+        <div class="container">
+            <h2>Create Account</h2>
+            <input id="registerName" type="text" placeholder="Full Name">
+            <input id="registerEmail" type="email" placeholder="Email">
+            <div class="password-container">
+                <input 
+                    id="registerPassword"
+                    type="password" 
+                    placeholder="Password" 
+                    required>                    
+            </div>    
+                <small class="password-rule">
+                    Password must contain:
+                    <br>
+                    ✔ 1 Uppercase Letter (A - Z)
+                    <br>
+                    ✔ 1 Lowercase Letter (a - z)
+                    <br>
+                    ✔ 1 Number
+                    <br>
+                    ✔ 1 Special Symbol
+                    <br>
+                    ✔ Minimum 8 Characters
+                </small>
+            <button onclick="registerUser()">Create Account</button>
+            <p>
+                Already have an account?
+                <a href="login.html">Login</a>
+            </p>
+            <a href="index.html" class="back-link">← Back to Home</a>
+        </div>
+        <script src="js/utils.js"></script>
+        <script src="js/auth.js"></script>
+    </body>
+</html>

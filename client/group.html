@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Group | FlyChat</title>
+        <link rel="stylesheet" href="css/style.css">
+    </head>
+    <body>
+        <div class="chat-container">
+            <div class="chat-header">
+                <a href="dashboard.html">
+                    ←
+                </a>
+                <div>
+                    <h3>
+                        👥 FlyChat Team
+                    </h3>
+                    <small>
+                        Group Chat
+                    </small>
+                </div>
+            </div>
+            <div 
+            class="chat-box" 
+            id="groupMessages">
+
+            </div>
+            <div id="groupEmojiBox" class="emoji-box">
+
+            </div>
+            <div class="chat-input">
+                <button
+                class="emoji-button"
+                id="groupEmojiBtn">
+                    😊
+                </button>
+                <input id="groupMessageInput" type="text" placeholder="Message group...">
+                <button onclick="sendGroupMessage()">
+                    Send
+                </button>
+            </div>
+            
+        </div>
+        <script src="js/utils.js"></script>
+        <script src="js/app.js"></script>
+    </body>
+</html>

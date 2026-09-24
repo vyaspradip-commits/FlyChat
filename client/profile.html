@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile | FlyChat</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="profile-page" onload="ckeckLogin(); loadProfile();">
+<div class="container">
+    <h2>👤 My Profile</h2>
+    <img 
+    id="profileImage"
+    src="images/user.png"
+    class="profile-image user-dp">
+    <br><br>
+    <input 
+    type="file"
+    id="imageUpload"
+    accept="image/*"
+    onchange="previewImage()">
+    <br><br>
+    <label>
+        Name
+    </label>
+    <input 
+    id="profileName"
+    type="text"
+    placeholder="Your Name">
+    <label>
+        Email
+    </label>
+    <input 
+    id="profileEmail"
+    type="email"
+    placeholder="Email"
+    >
+    <label>
+        Status
+    </label>
+    <textarea
+    id="profileStatus"
+    placeholder="Hey there, I am using FlyChat">
+    </textarea>
+    <button onclick="saveProfile()">
+        Save Profile
+    </button>
+    <br><br>
+    <a href="dashboard.html">
+        <button>
+            Back
+        </button>
+    </a>
+</div>
+<script src="js/utils.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/profile.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

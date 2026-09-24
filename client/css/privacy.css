@@ -1,0 +1,163 @@
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #f0f2f5;
+}
+
+.privacy-container {
+    width: 500px;
+    max-width: 90%;
+
+    margin: 40px auto;
+
+    background: white;
+
+    padding: 25px;
+
+    border-radius: 15px;
+}
+
+.privacy-option {
+    display: flex;
+    align-items: center;
+
+    gap: 10px;
+
+    padding: 15px;
+
+    margin-bottom: 10px;
+
+    border: 1px solid #ddd;
+
+    border-radius: 10px;
+}
+
+.privacy-option input {
+    width: 20px;
+    height: 20px;
+}
+
+#selectedUsersBox {
+    display: none;
+
+    margin-top: 20px;
+}
+
+.privacy-user-item {
+    display: flex;
+
+    align-items: center;
+
+    gap: 10px;
+
+    padding: 10px;
+
+    border-bottom: 1px solid #ddd;
+}
+
+.privacy-avatar {
+    width: 45px;
+    height: 45px;
+
+    border-radius: 50%;
+
+    object-fit: cover;
+}
+
+.privacy-user-info {
+    flex: 1;
+
+    display: flex;
+
+    flex-direction: column;
+}
+
+.privacy-user-info small {
+    color: gray;
+}
+
+.privacy-user {
+    width: 20px;
+    height: 20px;
+}
+
+.save-privacy-btn,
+.back-privacy-btn {
+    width: 100%;
+
+    min-height: 48px;
+
+    margin-top: 15px;
+}
+/* =========================
+   PRIVACY DARK MODE
+   ========================= */
+
+body.dark-mode {
+    background: #111b21;
+    color: white;
+}
+
+body.dark-mode .privacy-container {
+    background: #202c33;
+    color: white;
+}
+
+body.dark-mode .privacy-option {
+    background: #2a3942;
+    border-color: #3b4a54;
+    color: white;
+}
+
+body.dark-mode .privacy-option:hover {
+    background: #35434c;
+}
+
+body.dark-mode #selectedUsersBox {
+    background: #202c33;
+}
+
+body.dark-mode .privacy-user-item {
+    border-bottom: 1px solid #3b4a54;
+    color: white;
+}
+
+body.dark-mode .privacy-user-info small {
+    color: #b0b3b8;
+}
+
+body.dark-mode .save-privacy-btn,
+body.dark-mode .back-privacy-btn {
+    color: white;
+}
+@media (max-width: 768px) {
+
+    .privacy-container {
+        width: calc(100% - 24px);
+
+        margin: 15px auto;
+
+        padding: 18px;
+
+        box-sizing: border-box;
+    }
+
+    .privacy-container h2 {
+        font-size: 24px;
+    }
+
+    .privacy-option {
+        padding: 12px;
+    }
+
+    .privacy-user-info {
+        min-width: 0;
+    }
+
+    .privacy-user-info b,
+    .privacy-user-info small {
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+    }
+}
