@@ -1,5 +1,3 @@
-
-
 function loadProfile() {
     let user = getCurrentUser();
     if(!user){

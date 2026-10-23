@@ -1,28 +1,62 @@
-function saveData(key, value){
+function saveData(key, value) {
     localStorage.setItem(key, JSON.stringify(value));
 }
 
-function loadData(key){
-    let data = localStorage.getItem(key);
-    if(data === null){
-        return null;
-    }
-    return JSON.parse(data);
+function loadData(key) {
+    const data = localStorage.getItem(key);
+    return data ? JSON.parse(data) : [];
 }
 
 function removeData(key) {
     localStorage.removeItem(key);
 }
 
-function getCurrentUser(){
-    return loadData("currentUser");
+
+// =========================
+// CURRENT USER
+// =========================
+
+function setCurrentUser(user) {
+
+    sessionStorage.setItem(
+        "currentUser",
+        JSON.stringify(user)
+    );
+
 }
 
-function setCurrentUser(user){
-    saveData("currentUser",user);
+function getCurrentUser() {
+
+    const data =
+        sessionStorage.getItem("currentUser");
+
+    if (!data) {
+        return null;
+    }
+
+    try {
+        return JSON.parse(data);
+    } catch (error) {
+        console.error(
+            "Could not read current user:",
+            error
+        );
+        return null;
+    }
 }
-function isLoggedIn(){
-    return localStorage.getItem("loggedIn") === "true";
+
+
+// =========================
+// LOGIN STATUS
+// =========================
+
+function isLoggedIn() {
+
+    return (
+        sessionStorage.getItem("loggedIn") === "true" &&
+        sessionStorage.getItem("currentUser") !== null
+    );
+
 }
 
 function getCurrentTime(){
@@ -49,16 +83,16 @@ function getGroupChatKey(groupName){
 }
 
 function getProfileImage(){
-    let image = localStorage.getItem("profileImage");
-    if(image){
-        return image;
+    const user = getCurrentUser();
+    if(user && user.profileImage){
+        return user.profileImage;
     }
-    return "image/user.png";
+    return "images/user.png";
 }
 
 function escapeHTML(text){
-    const div = document.customElement("div");
-    div.innerText = text;
+    const div = document.createElement("div");
+    div.textContent = text ?? "";
     return div.innerHTML;
 }
 

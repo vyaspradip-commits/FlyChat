@@ -9,8 +9,8 @@ const protectedPages = [
     "privacy.html"
 ];
 if(protectedPages.includes(currentPage)){
-    let loggedIn = localStorage.getItem("loggedIn");
-    let currentUser = localStorage.getItem("currentUser");
+    let loggedIn = sessionStorage.getItem("loggedIn");
+    let currentUser = sessionStorage.getItem("currentUser");
     if(loggedIn !== "true" || currentUser === null){
         window.location.replace("login.html");
     }

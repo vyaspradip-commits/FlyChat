@@ -1,46 +1,70 @@
+
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scal=1.0">
-        <title>Create Group | FlyChat</title>
-        <link rel="stylesheet" href="css/create-group.css">
-        <link rel="stylesheet" href="css/style.css">
-    </head>
-    <body onload="checkLogin(); loadGroupMembers();">
-        <div class="create-group-page">
-            <div class="group-header">
-                <button class="back-btn" onclick="window.location.href='dashboard.html'">
-                    ←
-                </button>
-                <h2>Create Group</h2>
-            </div>
-            <div class="group-form">
-                <div class="group-image-section">
-                    <img id="groupImage" src="images/user.png" class="group-image" alt="Group">
-                    <label for="groupImageUpload" class="image-upload-btn">
-                        📷 Choose Group Image
-                    </label>
-                    <input type="file" id="groupImageUpload" accept="image/*" onchange="previewGroupImage()">
-                </div>
-                <label for="groupName">
-                    Group Name
-                </label>
-                <input type="text" id="groupName" placeholder="Enter group name" maxlength="40">
-                <label for="groupDescription">
-                    Description
-                </label>
-                <textarea id="groupDescription" placeholder="Group description" maxlength="150"></textarea>
-                <h3>Select Members</h3>
-                <div id="memberList" class="member-list"></div>
-                <button class="create-group-btn" onclick="createGroup()">
-                    👥 Create Group
-                </button>
-            </div>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Group | FlyChat</title>
+
+    <link rel="stylesheet" href="css/create-group.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body onload="checkLogin(); initializeGroupForm();">
+    <div class="create-group-page">
+
+        <div class="group-header">
+            <button class="back-btn"
+                    onclick="window.location.href='dashboard.html'">
+                ←
+            </button>
+            <h2 id="groupFormTitle">Create Group</h2>
         </div>
-        <script src="js/utils.js"></script>
-        <script src="js/auth.js"></script>
-        <script src="js/createGroup.js"></script>
-        <script src="js/app.js"></script>
-    </body>
+
+        <div class="group-form">
+
+            <div class="group-image-section">
+                <img id="groupImage"
+                     src="images/user.png"
+                     class="group-image"
+                     alt="Group">
+
+                <label for="groupImageUpload" class="image-upload-btn">
+                    📷 Choose Group Image
+                </label>
+
+                <input type="file"
+                       id="groupImageUpload"
+                       accept="image/*"
+                       onchange="previewGroupImage()">
+            </div>
+
+            <label for="groupName">Group Name</label>
+            <input type="text"
+                   id="groupName"
+                   placeholder="Enter group name"
+                   maxlength="40">
+
+            <label for="groupDescription">Description</label>
+            <textarea id="groupDescription"
+                      placeholder="Group description"
+                      maxlength="150"></textarea>
+
+            <h3>Select Members</h3>
+            <div id="memberList" class="member-list"></div>
+
+            <button id="createGroupButton"
+                    class="create-group-btn"
+                    onclick="createGroup()">
+                👥 Create Group
+            </button>
+
+        </div>
+    </div>
+
+    <script src="js/utils.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/createGroup.js"></script>
+    <script src="js/app.js"></script>
+</body>
 </html>

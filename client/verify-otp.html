@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Verify Email | FlyChat</title>
+        <link rel="stylesheet" href="css/style.css">
+    </head>
+    <body>
+        <div class="verify-container">
+            <h2>Verify Your Email</h2>
+            <p>We've sent a 6-digit verification code to your email address.</p>
+            <input 
+                type="text"
+                id="otpCode"
+                placeholder="Enter 6-digit OTP"
+                maxlength="6"
+                inputmode="numeric"
+                autocomplete="one-time-code">
+            
+            <button type="button" onclick="verifyOtp()">Verify Email</button>
+            <p id="otpMessage"></p>
+            <button type="button" onclick="resendOtp()">Resend OTP</button>
+        </div>
+        <script src="/js/utils.js"></script>
+        <script src="/js/verify-otp.js"></script>
+    </body>
+</html>

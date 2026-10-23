@@ -1,11 +1,11 @@
 // =========================
 // PASSWORD VALIDATION
 // =========================
-
+const OTP_ENABLED = false;
 function validatePassword(password){
 
     let pattern =
-        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&^#()_+\-=\[\]{};':"\\|,.<>/?]).{8,}$/;
+        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9\s]).{8,}$/;
 
     return pattern.test(password);
 }
@@ -15,24 +15,20 @@ function validatePassword(password){
 // REGISTER USER
 // =========================
 
-function registerUser(){
+async function registerUser(){
 
-    let name =
+    const name =
         document.getElementById("registerName").value.trim();
 
-    let email =
-        document.getElementById("registerEmail").value.trim();
+    const email =
+        document.getElementById("registerEmail").value.trim().toLowerCase();
 
-    let password =
+    const password =
         document.getElementById("registerPassword").value;
 
 
     // Check empty fields
-    if(
-        name === "" ||
-        email === "" ||
-        password === ""
-    ){
+    if (!name || !email || !password) {
 
         showAlert("Please fill all fields.");
 
@@ -41,15 +37,15 @@ function registerUser(){
 
 
     // Validate password
-    if(!validatePassword(password)){
+    if (!validatePassword(password)) {
 
         showAlert(
-`Password must contain
-✔ 8 Characters
-✔ 1 Uppercase
-✔ 1 Lowercase
-✔ 1 Number
-✔ 1 Special Symbol`
+            `Password must contain
+            ✔ 8 Characters
+            ✔ 1 Uppercase
+            ✔ 1 Lowercase
+            ✔ 1 Number
+            ✔ 1 Special Symbol`
         );
 
         return;
@@ -57,20 +53,20 @@ function registerUser(){
 
 
     // Load users
-    let users =
+    const users =
         loadData("users") || [];
 
 
     // Check existing email
-    let exists =
-        users.find(function(user){
+    const exists =
+        users.find(function(user) {
 
-            return user.email === email;
+            return user.email.toLowerCase() === email;
 
         });
 
 
-    if(exists){
+    if (exists) {
 
         showAlert(
             "Email already registered."
@@ -80,8 +76,87 @@ function registerUser(){
     }
 
 
-    // Create user
-    let user = {
+    // =========================
+    // OTP VERIFICATION
+    // =========================
+
+    if (OTP_ENABLED) {
+
+        try {
+
+            const response = await fetch(
+                "/api/auth/request-otp",
+                {
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+
+                    body: JSON.stringify({
+                        email: email
+                    })
+                }
+            );
+
+
+            const result =
+                await response.json();
+
+
+            if (!response.ok || !result.success) {
+
+                showAlert(
+                    result.message ||
+                    "Could not send OTP. Please try again."
+                );
+
+                return;
+            }
+
+
+            sessionStorage.setItem(
+                "pendingRegistration",
+
+                JSON.stringify({
+
+                    name: name,
+
+                    email: email,
+
+                    password: password
+
+                })
+            );
+
+
+            window.location.href =
+                "verify-otp.html";
+
+
+            return;
+
+        } catch (error) {
+
+            console.error(
+                "OTP request error:",
+                error
+            );
+
+            showAlert(
+                "Unable to connect to FlyChat server. Please try again."
+            );
+
+            return;
+        }
+    }
+
+
+    // =========================
+    // CREATE USER
+    // =========================
+
+    const user = {
 
         id: generateID(),
 
@@ -111,11 +186,18 @@ function registerUser(){
     );
 
 
+    // Remove old pending registration
+    sessionStorage.removeItem(
+        "pendingRegistration"
+    );
+
+
     showAlert(
         "Account Created Successfully"
     );
 
 
+    // Open login page
     window.location.href =
         "login.html";
 }
@@ -125,74 +207,103 @@ function registerUser(){
 // LOGIN USER
 // =========================
 
-function loginUser(){
+function loginUser() {
 
-    let email =
-        document.getElementById("loginEmail").value.trim();
+    const emailInput =
+        document.getElementById("loginEmail");
 
-    let password =
-        document.getElementById("loginPassword").value;
+    const passwordInput =
+        document.getElementById("loginPassword");
 
+    if (!emailInput || !passwordInput) {
+        console.error("Login fields not found.");
+        return;
+    }
 
-    // Load users
-    let users =
+    const email =
+        emailInput.value.trim().toLowerCase();
+
+    const password =
+        passwordInput.value;
+
+    if (!email || !password) {
+        showAlert("Please enter email and password.");
+        return;
+    }
+
+    // Get users from localStorage
+    const users =
         loadData("users") || [];
 
+    console.log("Login email:", email);
+    console.log("Users found:", users.length);
 
-    // Find user
-    let user =
-        users.find(function(u){
+    // Find account
+    const user =
+        users.find(function (u) {
 
             return (
-                u.email === email &&
+                u.email &&
+                u.email.trim().toLowerCase() === email &&
                 u.password === password
             );
 
         });
 
+    if (!user) {
 
-    if(!user){
+        console.log("LOGIN FAILED");
 
-        showAlert(
-            "Invalid Email or Password."
-        );
+        showAlert("Invalid Email or Password.");
 
         return;
     }
 
+    console.log("LOGIN USER FOUND:", user);
 
-    // Login status
-    localStorage.setItem(
+    // Clear old session first
+    sessionStorage.removeItem("loggedIn");
+    sessionStorage.removeItem("currentUser");
+    sessionStorage.removeItem("currentEmail");
+    sessionStorage.removeItem("currentUserId");
+
+    // Create new session
+    sessionStorage.setItem(
         "loggedIn",
         "true"
     );
 
-
-    // IMPORTANT:
-    // Store complete user object
-    setCurrentUser(user);
-
-
-    // Optional compatibility values
-    localStorage.setItem(
+    sessionStorage.setItem(
         "currentEmail",
         user.email
     );
 
-    localStorage.setItem(
+    sessionStorage.setItem(
         "currentUserId",
         user.id
     );
 
-
-    console.log(
-        "Logged in user:",
-        user
+    sessionStorage.setItem(
+        "currentUser",
+        JSON.stringify(user)
     );
 
+    console.log(
+        "LOGIN SUCCESS"
+    );
 
-    window.location.href =
-        "dashboard.html";
+    console.log(
+        "loggedIn:",
+        sessionStorage.getItem("loggedIn")
+    );
+
+    console.log(
+        "currentUser:",
+        sessionStorage.getItem("currentUser")
+    );
+
+    // Open dashboard
+    window.location.href ="dashboard.html";
 }
 
 
@@ -200,34 +311,27 @@ function loginUser(){
 // LOGOUT
 // =========================
 
-function logout(){
+function logout() {
 
-    if(
-        !showConfirm(
-            "Logout from FlyChat?"
-        )
-    ){
-
+    if (!showConfirm("Logout from FlyChat?")) {
         return;
     }
 
-
-    localStorage.removeItem(
+    sessionStorage.removeItem(
         "loggedIn"
     );
 
-    removeData(
+    sessionStorage.removeItem(
         "currentUser"
     );
 
-    localStorage.removeItem(
+    sessionStorage.removeItem(
         "currentEmail"
     );
 
-    localStorage.removeItem(
+    sessionStorage.removeItem(
         "currentUserId"
     );
-
 
     window.location.href =
         "login.html";
@@ -238,15 +342,61 @@ function logout(){
 // CHECK LOGIN
 // =========================
 
-function checkLogin(){
+function checkLogin() {
 
-    if(!isLoggedIn()){
+    const loggedIn = sessionStorage.getItem("loggedIn");
+    const currentUserJSON = sessionStorage.getItem("currentUser");
 
-        window.location.href =
-            "login.html";
+    console.log("========== CHECK LOGIN ==========");
+    console.log("loggedIn:", loggedIn);
+    console.log("currentUserJSON:", currentUserJSON);
 
+    if (loggedIn !== "true") {
+
+        console.log("❌ LOGIN STATUS NOT FOUND");
+
+        window.location.href = "login.html";
+        return false;
     }
 
+    if (!currentUserJSON) {
+
+        console.log("❌ CURRENT USER NOT FOUND");
+
+        window.location.href = "login.html";
+        return false;
+    }
+
+    let currentUser;
+
+    try {
+
+        currentUser = JSON.parse(currentUserJSON);
+
+    } catch (error) {
+
+        console.error("❌ CURRENT USER JSON ERROR:", error);
+
+        sessionStorage.removeItem("currentUser");
+
+        window.location.href = "login.html";
+        return false;
+    }
+
+    if (!currentUser.id || !currentUser.email) {
+
+        console.log("❌ INVALID CURRENT USER:", currentUser);
+
+        window.location.href = "login.html";
+        return false;
+    }
+
+    console.log("✅ LOGIN VALID");
+    console.log("User:", currentUser.name);
+    console.log("Email:", currentUser.email);
+    console.log("ID:", currentUser.id);
+
+    return true;
 }
 
 

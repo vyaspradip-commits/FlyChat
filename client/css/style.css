@@ -778,7 +778,13 @@ body:not(.dark) .sidebar li{
     margin-top: 5px;
     opacity: 0.7;
 }
-
+.message-status {
+    margin-left: 4px;
+    font-weight: bold;
+}
+.message-status.read {
+    color: #2196f3;
+}
 .chat-input{
     display:flex;
     gap:10px;
@@ -843,6 +849,65 @@ body:not(.dark) .sidebar li{
     display: block;
     text-decoration: none;
     color: inherit;
+}
+
+.edit-group-btn {
+    margin-left: auto;
+    border: none;
+    background: transparent;
+    font-size: 20px;
+    cursor: pointer;
+    padding: 8px;
+}
+
+.edit-group-box {
+    padding: 15px;
+    background: var(--chat-bg, #ffffff);
+    border-bottom: 1px solid #ddd;
+}
+
+.edit-group-image-section {
+    text-align: center;
+    margin-bottom: 15px;
+}
+
+.edit-group-image {
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
+    margin: 0 auto 10px;
+}
+
+.edit-group-image-section label {
+    cursor: pointer;
+    display: inline-block;
+    padding: 8px 12px;
+}
+
+.edit-group-image-section input[type="file"]{
+    display: none;
+}
+
+.edit-group-box input[type="text"]{
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px;
+    margin: 6px 0 15px;
+}
+
+.edit-group-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.edit-group-actions button {
+    padding: 9px 18px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
 }
 
 .password-rule{

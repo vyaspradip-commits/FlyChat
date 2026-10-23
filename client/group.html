@@ -1,48 +1,152 @@
+
 <!DOCTYPE html>
-<html>
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Group | FlyChat</title>
-        <link rel="stylesheet" href="css/style.css">
-    </head>
-    <body>
-        <div class="chat-container">
-            <div class="chat-header">
-                <a href="dashboard.html">
-                    ←
-                </a>
-                <div>
-                    <h3>
-                        👥 FlyChat Team
-                    </h3>
-                    <small>
-                        Group Chat
-                    </small>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Group Chat | FlyChat</title>
+
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/whatsapp.css">
+
+    <style>
+        html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+        }
+
+        .group-app {
+            display: flex !important;
+            width: 100% !important;
+            height: 100vh;
+            min-height: 0;
+        }
+
+        .group-chat-window {
+            display: flex !important;
+            flex: 1 1 auto !important;
+            flex-direction: column;
+            width: 100% !important;
+            min-width: 0;
+            height: 100%;
+        }
+
+        #groupChatArea {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            width: 100%;
+            min-width: 0;
+            min-height: 0;
+        }
+
+        #groupChatArea .chat-header {
+            flex-shrink: 0;
+        }
+
+        #groupMessages {
+            display: flex;
+            flex: 1;
+            flex-direction: column;
+            min-height: 0;
+            overflow-y: auto;
+        }
+
+        .group-chat-input {
+            display: flex;
+            flex-shrink: 0;
+            align-items: center;
+            gap: 8px;
+        }
+
+        #groupMessageInput {
+            flex: 1;
+            min-width: 0;
+        }
+
+        #groupEmojiBox {
+            display: none;
+            padding: 8px;
+        }
+
+        #groupEmojiBox button {
+            margin: 3px;
+            padding: 6px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body onload="checkLogin()">
+
+    <div class="app group-app">
+        <div class="chat-window group-chat-window">
+
+            <div id="groupChatArea">
+
+                <div class="chat-header">
+                    <div class="chat-header-left">
+
+                        <a href="dashboard.html"
+                           class="mobile-back-btn"
+                           aria-label="Back to dashboard">←</a>
+
+                        <img
+                            id="groupProfileImage"
+                            class="avatar"
+                            src="images/user.png"
+                            alt="Group profile">
+
+                        <div>
+                            <h3 id="groupTitle">Group</h3>
+                            <small>👥 Group Chat</small>
+                        </div>
+                    </div>
                 </div>
-            </div>
-            <div 
-            class="chat-box" 
-            id="groupMessages">
+
+                <div id="groupMessages" class="chat-box"></div>
+
+                <div id="groupEmojiBox">
+                    <button type="button">😀</button>
+                    <button type="button">😂</button>
+                    <button type="button">❤️</button>
+                    <button type="button">👍</button>
+                    <button type="button">🔥</button>
+                </div>
+
+                <div class="chat-input group-chat-input">
+
+                    <button id="groupEmojiBtn"
+                            type="button"
+                            title="Emoji">😊</button>
+
+                    <button id="groupAttachBtn"
+                            type="button"
+                            title="Choose attachment">＋</button>
+
+                    <input
+                        type="file"
+                        id="groupFileInput"
+                        hidden>
+
+                    <input
+                        id="groupMessageInput"
+                        type="text"
+                        placeholder="Type a message..."
+                        autocomplete="off">
+
+                    <button id="groupSendButton" type="button">➤</button>
+                </div>
 
             </div>
-            <div id="groupEmojiBox" class="emoji-box">
-
-            </div>
-            <div class="chat-input">
-                <button
-                class="emoji-button"
-                id="groupEmojiBtn">
-                    😊
-                </button>
-                <input id="groupMessageInput" type="text" placeholder="Message group...">
-                <button onclick="sendGroupMessage()">
-                    Send
-                </button>
-            </div>
-            
         </div>
-        <script src="js/utils.js"></script>
-        <script src="js/app.js"></script>
-    </body>
+    </div>
+
+    <script src="js/utils.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/groupChat.js"></script>
+    <script src="js/emoji.js"></script>
+    <script src="js/fileShare.js"></script>
+</body>
 </html>
