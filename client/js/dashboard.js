@@ -18,6 +18,227 @@ function loadWelcomeScreen(){
     `;
 }
 
+// =========================
+// LOAD REGISTERED USERS
+// =========================
+
+async function loadRegisteredUsers() {
+
+    const container =
+        document.getElementById("chatContainer");
+
+    if (!container) {
+        console.log("chatContainer not found.");
+        return;
+    }
+
+    try {
+
+        const response =
+            await fetch("/api/users");
+
+        const result =
+            await response.json();
+
+        if (!response.ok || !result.success) {
+
+            console.error(
+                "Could not load registered users:",
+                result.message
+            );
+
+            return;
+        }
+
+        console.log(
+            "Registered users from server:",
+            result.users
+        );
+
+
+        // =========================
+        // CURRENT USER
+        // =========================
+
+        const currentUser =
+            getCurrentUser();
+
+        const currentEmail =
+            currentUser &&
+            currentUser.email
+                ? currentUser.email.toLowerCase().trim()
+                : "";
+
+
+        // =========================
+        // SYNC SERVER USERS
+        // WITH LOCAL USERS
+        // =========================
+
+        const localUsers =
+            loadData("users") || [];
+
+        result.users.forEach(function(serverUser) {
+
+            const existingIndex =
+                localUsers.findIndex(function(user) {
+
+                    return (
+                        user.email &&
+                        serverUser.email &&
+                        user.email.toLowerCase().trim() ===
+                        serverUser.email.toLowerCase().trim()
+                    );
+
+                });
+
+
+            const syncedUser = {
+
+                id:
+                    serverUser.id,
+
+                name:
+                    serverUser.name,
+
+                email:
+                    serverUser.email,
+
+                profileImage:
+                    serverUser.profileImage ||
+                    "images/user.png",
+
+                status:
+                    serverUser.status ||
+                    "Hey there! I am using FlyChat."
+
+            };
+
+
+            if (existingIndex === -1) {
+
+                localUsers.push(syncedUser);
+
+            } else {
+
+                localUsers[existingIndex] = {
+                    ...localUsers[existingIndex],
+                    ...syncedUser
+                };
+
+            }
+
+        });
+
+
+        saveData(
+            "users",
+            localUsers
+        );
+
+
+        // =========================
+        // ADD USERS TO CHAT LIST
+        // =========================
+
+        result.users.forEach(function(user) {
+
+            // Don't show yourself in your own chat list
+            if (
+                currentEmail &&
+                user.email.toLowerCase().trim() ===
+                currentEmail
+            ) {
+                return;
+            }
+
+
+            // Don't add duplicate user
+            const existingChat =
+                container.querySelector(
+                    `[data-user-email="${CSS.escape(user.email)}"]`
+                );
+
+            if (existingChat) {
+                return;
+            }
+
+
+            const div =
+                document.createElement("div");
+
+            div.className =
+                "chat-item";
+
+            div.setAttribute(
+                "data-name",
+                user.name
+            );
+
+            div.setAttribute(
+                "data-user-email",
+                user.email
+            );
+
+
+            div.innerHTML = `
+
+                <img
+                    class="avatar"
+                    src="${user.profileImage || "images/user.png"}"
+                    alt="${escapeHTML(user.name)}">
+
+                <div class="chat-details">
+
+                    <h3>
+                        ${escapeHTML(user.name)}
+                    </h3>
+
+                    <p>
+                        ${escapeHTML(
+                            user.status ||
+                            "Hey there! I am using FlyChat."
+                        )}
+                    </p>
+
+                </div>
+
+            `;
+
+
+            div.addEventListener(
+                "click",
+                function() {
+
+                    openChat(
+                        user.name,
+                        user.email
+                    );
+
+                }
+            );
+
+
+            container.appendChild(div);
+
+        });
+
+
+        console.log(
+            "Registered users added to dashboard."
+        );
+
+
+    } catch (error) {
+
+        console.error(
+            "Load registered users error:",
+            error
+        );
+
+    }
+}
+
 function openChat(userName, userEmail) {
 
     showMobileChat();
@@ -152,9 +373,12 @@ function openChat(userName, userEmail) {
             <input
                 id="messageInput"
                 type="text"
-                placeholder="Type a message">
+                placeholder="Type a message"
+                autocomplete="off">
 
             <button
+                type="button"
+                id="sendButton"
                 onclick="sendMessage()">
                 ➤
             </button>
@@ -432,7 +656,7 @@ window.addEventListener("load", function () {
     if (document.getElementById("chatArea")) {
 
         loadWelcomeScreen();
-
+        loadRegisteredUsers();
         loadCreatedGroups();
         loadChatListImages();
         loadCurrentUserImage();

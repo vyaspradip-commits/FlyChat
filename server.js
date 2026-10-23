@@ -7,6 +7,8 @@ require("dotenv").config();
 const crypto = require("crypto");
 const { Resend } = require("resend");
 const { type } = require("os");
+const { profile } = require("console");
+const e = require("express");
 const resend = new Resend(process.env.RESEND_API_KEY);
 const app = express();
 app.use(express.json());
@@ -14,7 +16,7 @@ app.use(express.urlencoded({ extended: true }));
 const pendingOtps = new Map();
 
 const chatDataFile = path.join(__dirname, "chat-data.json");
-
+const userDataFile = path.join(__dirname, "users-data.json");
 if (!fs.existsSync(chatDataFile)) {
     fs.writeFileSync(chatDataFile,JSON.stringify({}, null, 2));
 }
@@ -31,7 +33,22 @@ function loadChatData() {
 function saveChatData(data) {
     fs.writeFileSync(chatDataFile, JSON.stringify(data, null, 2));
 }
+function loadUsersData(){
+    try{
+        if (!fs.existsSync(userDataFile)) {
+            fs.writeFileSync(userDataFile, "[]");
+        }
+        const data = fs.readFileSync(userDataFile, "utf8");
+        return JSON.parse(data || "[]");
+    }catch (error){
+        console.error("Error loading users:",error);
+        return [];
+    }
+}
 
+function saveUsersData(users){
+    fs.writeFileSync(userDataFile, JSON.stringify(users, null, 2));
+}
 const OTP_EXPIRY = 10 * 60 * 1000;
 const MAX_OTP_ATTEMPTS = 5;
 function generateOtp() {
@@ -718,7 +735,227 @@ app.post("/api/chat/send-file", (req, res) => {
     });
 
 });
+app.get("/api/users", (req, res) => {
+    try{
+        const users = loadUsersData();
+        const publicUsers= users.map(function(user){
+            return{
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                profileImage: user.profileImage || "images/user.png",
+                status: user.status || "Hey there! I am using FlyChat."
+            };
+        });
+        return res.json({
+            success: true,
+            users: publicUsers
+        });
+    } catch (error) {
+        console.error("Load users error:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Could not load users."
+        });
+    }
+});
 
+// =========================
+// UPDATE USER PROFILE
+// =========================
+
+app.post("/api/users/update", (req, res) => {
+
+    try {
+
+        const {
+            id,
+            name,
+            email,
+            status,
+            profileImage
+        } = req.body;
+
+
+        if (!id || !name || !email) {
+
+            return res.status(400).json({
+                success: false,
+                message: "User ID, name and email are required."
+            });
+
+        }
+
+
+        const users =
+            loadUsersData();
+
+
+        const index =
+            users.findIndex(function(user) {
+
+                return String(user.id) ===
+                       String(id);
+
+            });
+
+
+        if (index === -1) {
+
+            return res.status(404).json({
+                success: false,
+                message: "User not found."
+            });
+
+        }
+
+
+        // =========================
+        // UPDATE USER DATA
+        // =========================
+
+        users[index].name =
+            name.trim();
+
+        users[index].email =
+            email.trim().toLowerCase();
+
+        users[index].status =
+            status ||
+            "Hey there! I am using FlyChat.";
+
+
+        if (profileImage) {
+
+            users[index].profileImage =
+                profileImage;
+
+        }
+
+
+        // =========================
+        // SAVE TO SERVER
+        // =========================
+
+        saveUsersData(users);
+
+
+        console.log(
+            "User profile updated:",
+            users[index]
+        );
+
+
+        return res.json({
+
+            success: true,
+
+            message:
+                "Profile updated successfully.",
+
+            user: {
+
+                id:
+                    users[index].id,
+
+                name:
+                    users[index].name,
+
+                email:
+                    users[index].email,
+
+                profileImage:
+                    users[index].profileImage ||
+                    "images/user.png",
+
+                status:
+                    users[index].status
+
+            }
+
+        });
+
+
+    } catch (error) {
+
+        console.error(
+            "Update user profile error:",
+            error
+        );
+
+        return res.status(500).json({
+
+            success: false,
+
+            message:
+                "Could not update user profile."
+
+        });
+
+    }
+
+});
+
+app.post("/api/users/register", (req, res) => {
+
+    const name = req.body?.name?.trim();
+    const email = req.body?.email?.trim().toLowerCase();
+    const password = req.body?.password;
+
+    if (!name || !email || !password) {
+        return res.status(400).json({
+            success: false,
+            message: "Name, email and password are required."
+        });
+    }
+
+    const usersFile = path.join(__dirname, "users-data.json");
+
+    let users = [];
+
+    if (fs.existsSync(usersFile)) {
+        try {
+            users = JSON.parse(
+                fs.readFileSync(usersFile, "utf8")
+            );
+        } catch (error) {
+            users = [];
+        }
+    }
+
+    const exists = users.find(user =>
+        String(user.email).toLowerCase() === email
+    );
+
+    if (exists) {
+        return res.status(409).json({
+            success: false,
+            message: "Email already registered."
+        });
+    }
+
+    const user = {
+        id: "user_" + Date.now().toString(36),
+        name: name,
+        email: email,
+        profileImage: "images/user.png",
+        status: "Hey there! I am using FlyChat."
+    };
+
+    users.push(user);
+
+    fs.writeFileSync(
+        usersFile,
+        JSON.stringify(users, null, 2)
+    );
+
+    console.log("New user registered:", user);
+
+    return res.json({
+        success: true,
+        user: user
+    });
+});
 app.use(express.static(path.join(__dirname, "client")));
 app.use("/upload", upload.single("file"), (req, res) => {
     if (!req.file){

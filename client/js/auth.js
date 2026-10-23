@@ -1,5 +1,6 @@
 // =========================
 // PASSWORD VALIDATION
+
 // =========================
 const OTP_ENABLED = false;
 function validatePassword(password){
@@ -10,13 +11,64 @@ function validatePassword(password){
     return pattern.test(password);
 }
 
+async function registerUserOnServer(user) {
+    try{
+        const response = await fetch("/api/users/register", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({
+                name: user.name,
+                email: user.email,
+                password: user.password
+            })
+        });
+        const result = await response.json();
 
+        if (!response.ok || !result.success) {
+
+            console.error(
+                "Server registration failed:",
+                result.message
+            );
+
+            return {
+                success: false,
+                message:
+                    result.message ||
+                    "Could not register user on server."
+            };
+        }
+
+        console.log(
+            "User registered on server:",
+            result.user
+        );
+
+        return {
+            success: true,
+            user: result.user
+        };
+
+    } catch (error) {
+
+        console.error(
+            "Server registration error:",
+            error
+        );
+
+        return {
+            success: false,
+            message:
+                "Unable to connect to FlyChat server."
+        };
+    }
+}
 // =========================
 // REGISTER USER
 // =========================
 
 async function registerUser(){
-
+    console.log("Register Button worked.");
     const name =
         document.getElementById("registerName").value.trim();
 
@@ -157,33 +209,89 @@ async function registerUser(){
     // =========================
 
     const user = {
-
         id: generateID(),
-
         name: name,
-
         email: email,
-
         password: password,
-
-        profileImage:
-            "images/user.png",
-
-        status:
-            "Hey there! I am using FlyChat."
-
+        profileImage: "images/user.png",
+        status: "Hey there! I am using FlyChat."
     };
 
 
-    // Add user
-    users.push(user);
+    // =========================
+    // SAVE USER ON SERVER
+    // =========================
+
+    try {
+
+        const response = await fetch(
+            "/api/users/register",
+            {
+                method: "POST",
+
+                headers: {
+                    "Content-Type": "application/json"
+                },
+
+                body: JSON.stringify({
+                    name: name,
+                    email: email,
+                    password: password
+                })
+            }
+        );
+
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+
+            showAlert(
+                result.message ||
+                "Could not create account."
+            );
+
+            return;
+        }
+
+        console.log(
+            "User saved on server:",
+            result.user
+        );
 
 
-    // Save users
-    saveData(
-        "users",
-        users
-    );
+        // =========================
+        // SAVE USER LOCALLY
+        // =========================
+
+        users.push({
+            id: result.user.id,
+            name: result.user.name,
+            email: result.user.email,
+            password: password,
+            profileImage:
+                result.user.profileImage ||
+                "images/user.png",
+            status:
+                result.user.status ||
+                "Hey there! I am using FlyChat."
+        });
+
+        saveData("users", users);
+
+
+    } catch (error) {
+
+        console.error(
+            "Server registration error:",
+            error
+        );
+
+        showAlert(
+            "Unable to connect to FlyChat server."
+        );
+
+        return;
+    }
 
 
     // Remove old pending registration

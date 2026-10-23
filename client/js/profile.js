@@ -114,7 +114,7 @@ function previewImage(){
     reader.readAsDataURL(file);
 }
 
-function saveProfile(){
+async function saveProfile(){
 
     let currentUser = getCurrentUser();
 
@@ -135,68 +135,305 @@ function saveProfile(){
     const profileImage =
         document.getElementById("profileImage");
 
-    let name = nameInput.value.trim();
-    let email = emailInput.value.trim();
-    let status = statusInput.value.trim();
+    const fileInput =
+        document.getElementById("imageUpload");
+
+
+    if(!nameInput || !emailInput || !statusInput || !profileImage){
+        return;
+    }
+
+
+    let name =
+        nameInput.value.trim();
+
+    let email =
+        emailInput.value.trim().toLowerCase();
+
+    let status =
+        statusInput.value.trim();
+
 
     if(name === "" || email === ""){
         showAlert("Name and Email are required.");
         return;
     }
 
-    // Get current image
-    let image = profileImage.src;
 
-    // Update current user
-    currentUser.name = name;
-    currentUser.email = email;
-    currentUser.status = status;
+    // =========================
+    // SAVE BASIC PROFILE DATA
+    // =========================
 
-    if(image && image.startsWith("data:image")){
-        currentUser.profileImage = image;
-    }
+    currentUser.name =
+        name;
 
-    // Get all users
-    let users = loadData("users") || [];
+    currentUser.email =
+        email;
 
-    // Find user by ID first
-    let index = users.findIndex(function(user){
-        return user.id === currentUser.id;
-    });
+    currentUser.status =
+        status;
 
-    // If ID doesn't match, find by email
-    if(index === -1){
 
-        index = users.findIndex(function(user){
-            return user.email === currentUser.email;
-        });
+    // =========================
+    // UPLOAD PROFILE IMAGE
+    // =========================
 
-    }
+    if(
+        fileInput &&
+        fileInput.files &&
+        fileInput.files.length > 0
+    ){
 
-    // Update users array
-    if(index !== -1){
+        const file =
+            fileInput.files[0];
 
-        // Keep the original registered ID
-        currentUser.id = users[index].id;
 
-        users[index] = currentUser;
+        try{
 
-        saveData("users", users);
+            const formData =
+                new FormData();
+
+            formData.append(
+                "file",
+                file
+            );
+
+
+            const response =
+                await fetch(
+                    "/api/chat/upload",
+                    {
+                        method: "POST",
+                        body: formData
+                    }
+                );
+
+
+            const result =
+                await response.json();
+
+
+            if(
+                !response.ok ||
+                !result.success
+            ){
+
+                console.error(
+                    "Profile image upload failed:",
+                    result
+                );
+
+                showAlert(
+                    result.message ||
+                    "Unable to upload profile picture."
+                );
+
+                return;
+            }
+
+
+            // Save server URL
+            currentUser.profileImage =
+                result.file.url;
+
+
+            console.log(
+                "Profile image uploaded:",
+                result.file.url
+            );
+
+
+        }
+        catch(error){
+
+            console.error(
+                "Profile image upload error:",
+                error
+            );
+
+            showAlert(
+                "Unable to upload profile picture."
+            );
+
+            return;
+        }
 
     }
     else{
 
-        console.log("User not found in users array.");
+        // Keep existing profile image
+        currentUser.profileImage =
+            currentUser.profileImage ||
+            "images/user.png";
 
-        showAlert("Could not find your account.");
+    }
+
+
+    // =========================
+    // UPDATE LOCAL USERS
+    // =========================
+
+    let users =
+        loadData("users") || [];
+
+
+    let index =
+        users.findIndex(function(user){
+
+            return String(user.id) ===
+                   String(currentUser.id);
+
+        });
+
+
+    // Fallback: find by old email
+    if(index === -1){
+
+        index =
+            users.findIndex(function(user){
+
+                return (
+                    user.email &&
+                    user.email.toLowerCase() ===
+                    email
+                );
+
+            });
+
+    }
+
+
+    if(index === -1){
+
+        console.log(
+            "User not found in local users array."
+        );
+
+        showAlert(
+            "Could not find your account."
+        );
+
         return;
     }
 
-    // Save synchronized current user
-    setCurrentUser(currentUser);
 
-    showAlert("Profile Updated Successfully");
+    // Keep original ID
+    currentUser.id =
+        users[index].id;
 
-    console.log("Profile saved:", currentUser);
-    console.log("Users updated:", loadData("users"));
+
+    users[index] = {
+        ...users[index],
+        ...currentUser
+    };
+
+
+    saveData(
+        "users",
+        users
+    );
+
+
+    // =========================
+    // SAVE CURRENT USER
+    // =========================
+
+    setCurrentUser(
+        currentUser
+    );
+
+
+    console.log(
+        "Local profile saved:",
+        currentUser
+    );
+
+
+    // =========================
+    // UPDATE SERVER PROFILE
+    // =========================
+
+    try{
+
+        const response =
+            await fetch(
+                "/api/users/update",
+                {
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    body: JSON.stringify({
+
+                        id:
+                            currentUser.id,
+
+                        name:
+                            currentUser.name,
+
+                        email:
+                            currentUser.email,
+
+                        status:
+                            currentUser.status,
+
+                        profileImage:
+                            currentUser.profileImage
+
+                    })
+                }
+            );
+
+
+        const result =
+            await response.json();
+
+
+        if(
+            !response.ok ||
+            !result.success
+        ){
+
+            console.error(
+                "Server profile update failed:",
+                result
+            );
+
+            showAlert(
+                result.message ||
+                "Profile saved locally, but server update failed."
+            );
+
+            return;
+        }
+
+
+        console.log(
+            "Server profile updated:",
+            result
+        );
+
+
+        showAlert(
+            "Profile Updated Successfully"
+        );
+
+
+    }
+    catch(error){
+
+        console.error(
+            "Server profile update error:",
+            error
+        );
+
+        showAlert(
+            "Profile saved locally, but server could not be updated."
+        );
+
+    }
+
 }
