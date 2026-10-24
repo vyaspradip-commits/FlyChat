@@ -177,7 +177,7 @@ function previewGroupImage() {
 // CREATE OR UPDATE GROUP
 // =========================
 
-function createGroup() {
+async function createGroup() {
     const nameInput = document.getElementById("groupName");
     const descriptionInput =
         document.getElementById("groupDescription");
@@ -222,6 +222,7 @@ function createGroup() {
     // =========================
 
     if (editingGroupId) {
+
         const index = groups.findIndex(function (group) {
             return String(group.id) === String(editingGroupId);
         });
@@ -241,8 +242,7 @@ function createGroup() {
             return;
         }
 
-        // Preserve the original ID and all other existing properties.
-        groups[index] = {
+        const updatedGroup = {
             ...existingGroup,
             name: groupName,
             description: description,
@@ -250,13 +250,58 @@ function createGroup() {
             members: memberIds
         };
 
-        saveData("groups", groups);
+        try {
 
-        sessionStorage.removeItem("editingGroupId");
+            const response = await fetch(
+                `/api/groups/${encodeURIComponent(existingGroup.id)}`,
+                {
+                    method: "PUT",
 
-        showAlert("Group updated successfully!");
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
 
-        window.location.href = "dashboard.html";
+                    body: JSON.stringify(updatedGroup)
+                }
+            );
+
+            const result = await response.json();
+
+            if (!response.ok || !result.success) {
+
+                showAlert(
+                    result.message ||
+                    "Could not update group."
+                );
+
+                return;
+            }
+
+            groups[index] = result.group;
+
+            saveData("groups", groups);
+
+            sessionStorage.removeItem("editingGroupId");
+
+            showAlert(
+                "Group updated successfully!"
+            );
+
+            window.location.href = "dashboard.html";
+
+        } catch (error) {
+
+            console.error(
+                "Update group error:",
+                error
+            );
+
+            showAlert(
+                "Unable to connect to FlyChat server."
+            );
+
+        }
+
         return;
     }
 
@@ -270,17 +315,29 @@ function createGroup() {
 
         name: groupName,
         description: description,
-        image: selectedGroupImage,
+        image: "images/user.png",
         creatorId: currentUser.id,
         members: memberIds,
         createdAt: new Date().toISOString()
     };
 
-    groups.push(group);
-
-    saveData("groups", groups);
-
-    showAlert("Group created successfully!");
-
-    window.location.href = "dashboard.html";
+    try{
+        const response = await fetch("/api/groups", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(group)
+        });
+        const result = await response.json();
+        if (!response.ok || !result.success) {
+            showAlert(result.message || "Could not create group.");
+            return;
+        }
+        groups.push(result.group);
+        saveData("groups", groups);
+        showAlert("Group created successfully!");
+        window.location.href = "dashboard.html";
+    } catch (error) {
+        console.error("Create group error:", error);
+        showAlert("Unable to connect to FlyChat server.");
+    }
 }

@@ -258,7 +258,7 @@ function openChat(userName, userEmail) {
 
     const users = loadData("users") || [];
 
-    const chatUser = users.find(function(user) {
+    let chatUser = users.find(function(user) {
 
         return (
             user.email &&
@@ -268,7 +268,16 @@ function openChat(userName, userEmail) {
         );
 
     });
-
+    if(!chatUser && userEmail){
+        chatUser = {
+            id: "",
+            name: userName,
+            email: userEmail,
+            profileImage: "images/user.png",
+            status: "Hey there! I am using FlyChat."
+        };
+    }
+    currentPrivateChatUser = chatUser;
     console.log("Opening private chat:", userName);
     console.log("Chat email:", userEmail);
     console.log("Chat user:", chatUser);
@@ -605,64 +614,183 @@ function loadChatListImages(){
     });
 }
 
+async function loadCreatedGroups() {
 
-function loadCreatedGroups() {
-    const container = document.getElementById("chatContainer");
+    const container =
+        document.getElementById("chatContainer");
 
-    if (!container) return;
+    if (!container) {
+        console.log("chatContainer not found.");
+        return;
+    }
 
-    const groups = loadData("groups") || [];
+    const currentUser =
+        getCurrentUser();
 
-    groups.forEach(function (group) {
-        if (!group || !group.id) return;
+    if (!currentUser || !currentUser.id) {
+        console.log("Current user not found.");
+        return;
+    }
 
-        // Prevent duplicate group cards
-        const alreadyExists = Array.from(
-            container.querySelectorAll("[data-group-id]")
-        ).some(function (item) {
-            return item.dataset.groupId === String(group.id);
+    try {
+
+        const response =
+            await fetch(
+                "/api/groups?userId=" +
+                encodeURIComponent(currentUser.id)
+            );
+
+        const result =
+            await response.json();
+
+        if (!response.ok || !result.success) {
+
+            console.error(
+                "Could not load groups:",
+                result.message
+            );
+
+            return;
+        }
+
+        console.log(
+            "Groups from server:",
+            result.groups
+        );
+
+
+        // =========================
+        // SYNC SERVER GROUPS
+        // TO LOCAL STORAGE
+        // =========================
+
+        saveData(
+            "groups",
+            result.groups || []
+        );
+
+
+        // =========================
+        // ADD GROUPS TO CHAT LIST
+        // =========================
+
+        (result.groups || []).forEach(function(group) {
+
+            if (!group || !group.id) {
+                return;
+            }
+
+
+            // Prevent duplicate group cards
+
+            const alreadyExists =
+                container.querySelector(
+                    `[data-group-id="${CSS.escape(String(group.id))}"]`
+                );
+
+            if (alreadyExists) {
+                return;
+            }
+
+
+            const div =
+                document.createElement("div");
+
+            div.className =
+                "chat-item";
+
+            div.dataset.groupId =
+                String(group.id);
+
+            div.dataset.name =
+                group.name || "Group";
+
+
+            const memberCount =
+                Array.isArray(group.members)
+                    ? group.members.length
+                    : 0;
+
+
+            div.innerHTML = `
+
+                <img
+                    class="avatar"
+                    src="${escapeHTML(
+                        group.image ||
+                        "images/user.png"
+                    )}"
+                    alt="Group">
+
+                <div class="chat-details">
+
+                    <h3>
+                        👥 ${escapeHTML(
+                            group.name ||
+                            "Group"
+                        )}
+                    </h3>
+
+                    <p>
+                        ${memberCount} Members
+                    </p>
+
+                </div>
+
+            `;
+
+
+            div.addEventListener(
+                "click",
+                function() {
+
+                    openGroup(
+                        group.name,
+                        group.id
+                    );
+
+                }
+            );
+
+
+            container.appendChild(div);
+
         });
 
-        if (alreadyExists) return;
 
-        const div = document.createElement("div");
-        div.className = "chat-item";
-        div.dataset.groupId = group.id;
-        div.dataset.name = group.name || "Group";
-        const memberCount = (group.members || []).filter(function(memberId){
-            return String(memberId) !== String(group.creatorId);
-        }).length;
-        div.innerHTML = `
-            <img
-                class="avatar"
-                src="${group.image || "images/user.png"}"
-                alt="Group">
+        console.log(
+            "Server groups added to dashboard."
+        );
 
-            <div class="chat-details">
-                <h3>👥 ${group.name || "Group"}</h3>
-                <p>${memberCount} Members</p>
-            </div>
-        `;
 
-        div.onclick = function () {
-            openGroup(group.name, group.id);
-        };
+    } catch (error) {
 
-        container.appendChild(div);
-    });
+        console.error(
+            "Load groups error:",
+            error
+        );
+
+    }
 }
-window.addEventListener("load", function () {
+
+window.addEventListener("load", async function () {
 
     if (document.getElementById("chatArea")) {
 
         loadWelcomeScreen();
-        loadRegisteredUsers();
-        loadCreatedGroups();
+
+        await loadRegisteredUsers();
+
+        await loadCreatedGroups();
+
         loadChatListImages();
+
         loadCurrentUserImage();
+
     }
 
 });
+
 function closeGroupChat() {
     currentChat = null;
     currentChatType = null;

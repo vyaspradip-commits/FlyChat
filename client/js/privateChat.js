@@ -1,8 +1,11 @@
 // =========================
 // GET CURRENT CHAT USER
 // =========================
-
+let currentPrivateChatUser = null;
 function getChatUser() {
+    if (currentPrivateChatUser) {
+        return currentPrivateChatUser;
+    }
     const users = loadData("users") || [];
     const chatTitle = document.getElementById("chatTitle");
 

@@ -9,14 +9,16 @@ const { Resend } = require("resend");
 const { type } = require("os");
 const { profile } = require("console");
 const e = require("express");
+const { findSourceMap } = require("module");
 const resend = new Resend(process.env.RESEND_API_KEY);
 const app = express();
-app.use(express.json());
+app.use(express.json({limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 const pendingOtps = new Map();
 
 const chatDataFile = path.join(__dirname, "chat-data.json");
 const userDataFile = path.join(__dirname, "users-data.json");
+const groupDataFile = path.join(__dirname, "groups-data.json");
 if (!fs.existsSync(chatDataFile)) {
     fs.writeFileSync(chatDataFile,JSON.stringify({}, null, 2));
 }
@@ -48,6 +50,23 @@ function loadUsersData(){
 
 function saveUsersData(users){
     fs.writeFileSync(userDataFile, JSON.stringify(users, null, 2));
+}
+
+function loadGroupsData(){
+    try{
+        if (!fs.existsSync(groupDataFile)) {
+            fs.writeFileSync(groupDataFile, "[]");
+        }
+        const data = fs.readFileSync(groupDataFile, "utf8");
+        return JSON.parse(data || "[]");
+    } catch (error){
+        console.error("Load groups data error:", error);
+        return [];
+    }
+}
+
+function saveGroupsData(groups){
+    fs.writeFileSync(groupDataFile, JSON.stringify(groups, null, 2));
 }
 const OTP_EXPIRY = 10 * 60 * 1000;
 const MAX_OTP_ATTEMPTS = 5;
@@ -760,126 +779,249 @@ app.get("/api/users", (req, res) => {
     }
 });
 
-// =========================
-// UPDATE USER PROFILE
-// =========================
-
-app.post("/api/users/update", (req, res) => {
-
+app.post("/api/users/migrate", (req, res) => {
     try {
+        const incomingUsers = req.body?.users;
 
-        const {
-            id,
-            name,
-            email,
-            status,
-            profileImage
-        } = req.body;
-
-
-        if (!id || !name || !email) {
-
+        if (!Array.isArray(incomingUsers)) {
             return res.status(400).json({
                 success: false,
-                message: "User ID, name and email are required."
+                message: "Users array is required."
             });
-
         }
 
+        const users = loadUsersData();
 
-        const users =
-            loadUsersData();
+        let added = 0;
+        let updated = 0;
 
+        incomingUsers.forEach(function (incomingUser) {
 
-        const index =
-            users.findIndex(function(user) {
+            if (
+                !incomingUser ||
+                !incomingUser.email
+            ) {
+                return;
+            }
 
-                return String(user.id) ===
-                       String(id);
+            const email =
+                incomingUser.email
+                    .trim()
+                    .toLowerCase();
 
+            let index = users.findIndex(function (user) {
+                return (
+                    user.email &&
+                    user.email
+                        .trim()
+                        .toLowerCase() === email
+                );
             });
 
+            const user = {
+                id: incomingUser.id || generateID(),
+                name: incomingUser.name || "User",
+                email: email,
+                password: incomingUser.password || "",
+                profileImage:
+                    incomingUser.profileImage ||
+                    "images/user.png",
+                status:
+                    incomingUser.status ||
+                    "Hey there! I am using FlyChat."
+            };
 
-        if (index === -1) {
+            if (index === -1) {
 
-            return res.status(404).json({
-                success: false,
-                message: "User not found."
-            });
+                users.push(user);
+                added++;
 
-        }
+            } else {
 
+                // Preserve the server user's ID
+                user.id = users[index].id;
 
-        // =========================
-        // UPDATE USER DATA
-        // =========================
+                users[index] = {
+                    ...users[index],
+                    ...user
+                };
 
-        users[index].name =
-            name.trim();
-
-        users[index].email =
-            email.trim().toLowerCase();
-
-        users[index].status =
-            status ||
-            "Hey there! I am using FlyChat.";
-
-
-        if (profileImage) {
-
-            users[index].profileImage =
-                profileImage;
-
-        }
-
-
-        // =========================
-        // SAVE TO SERVER
-        // =========================
+                updated++;
+            }
+        });
 
         saveUsersData(users);
 
+        return res.json({
+            success: true,
+            message: "Users migrated successfully.",
+            added: added,
+            updated: updated,
+            total: users.length
+        });
 
-        console.log(
-            "User profile updated:",
-            users[index]
+    } catch (error) {
+
+        console.error(
+            "User migration error:",
+            error
         );
 
+        return res.status(500).json({
+            success: false,
+            message: "Could not migrate users."
+        });
+    }
+});
+
+app.get("/api/groups", (req, res) => {
+
+    try {
+
+        const userId =
+            String(req.query.userId || "").trim();
+
+        if (!userId) {
+
+            return res.status(400).json({
+                success: false,
+                message: "User ID is required."
+            });
+
+        }
+
+        const groups =
+            loadGroupsData();
+
+        const userGroups =
+            groups.filter(function(group) {
+
+                return (
+                    Array.isArray(group.members) &&
+                    group.members.some(function(memberId) {
+
+                        return String(memberId) === userId;
+
+                    })
+                );
+
+            });
+
+        return res.json({
+
+            success: true,
+
+            groups: userGroups
+
+        });
+
+    } catch (error) {
+
+        console.error(
+            "Load groups error:",
+            error
+        );
+
+        return res.status(500).json({
+
+            success: false,
+
+            message: "Could not load groups."
+
+        });
+
+    }
+
+});
+
+app.post("/api/groups", (req, res) => {
+
+    try {
+
+        const group =
+            req.body;
+
+        if (!group) {
+
+            return res.status(400).json({
+                success: false,
+                message: "Group data is required."
+            });
+
+        }
+
+        if (
+            !group.id ||
+            !group.name ||
+            !group.creatorId
+        ) {
+
+            return res.status(400).json({
+                success: false,
+                message:
+                    "Group ID, name and creator are required."
+            });
+
+        }
+
+        if (
+            !Array.isArray(group.members) ||
+            group.members.length < 2
+        ) {
+
+            return res.status(400).json({
+                success: false,
+                message:
+                    "A group must have at least 2 members."
+            });
+
+        }
+
+        const groups =
+            loadGroupsData();
+
+        const existingGroup =
+            groups.find(function(existing) {
+
+                return String(existing.id) ===
+                    String(group.id);
+
+            });
+
+        if (existingGroup) {
+
+            return res.status(409).json({
+                success: false,
+                message: "Group already exists."
+            });
+
+        }
+
+        groups.push(group);
+
+        saveGroupsData(groups);
+
+        console.log(
+            "Group created:",
+            group.name,
+            group.id
+        );
 
         return res.json({
 
             success: true,
 
             message:
-                "Profile updated successfully.",
+                "Group created successfully.",
 
-            user: {
-
-                id:
-                    users[index].id,
-
-                name:
-                    users[index].name,
-
-                email:
-                    users[index].email,
-
-                profileImage:
-                    users[index].profileImage ||
-                    "images/user.png",
-
-                status:
-                    users[index].status
-
-            }
+            group: group
 
         });
-
 
     } catch (error) {
 
         console.error(
-            "Update user profile error:",
+            "Create group error:",
             error
         );
 
@@ -888,12 +1030,339 @@ app.post("/api/users/update", (req, res) => {
             success: false,
 
             message:
-                "Could not update user profile."
+                "Could not create group."
 
         });
 
     }
 
+});
+
+app.put("/api/groups/:id", (req, res) => {
+
+    try {
+
+        const groupId =
+            String(req.params.id);
+
+        const updatedGroup =
+            req.body;
+
+        const groups =
+            loadGroupsData();
+
+        const index =
+            groups.findIndex(function(group) {
+
+                return String(group.id) === groupId;
+
+            });
+
+        if (index === -1) {
+
+            return res.status(404).json({
+
+                success: false,
+
+                message: "Group not found."
+
+            });
+
+        }
+
+        const existingGroup =
+            groups[index];
+
+        if (
+            String(existingGroup.creatorId) !==
+            String(updatedGroup.creatorId)
+        ) {
+
+            return res.status(403).json({
+
+                success: false,
+
+                message:
+                    "Only the group creator can edit this group."
+
+            });
+
+        }
+
+        groups[index] = {
+
+            ...existingGroup,
+
+            ...updatedGroup,
+
+            id: existingGroup.id,
+
+            creatorId: existingGroup.creatorId
+
+        };
+
+        saveGroupsData(groups);
+
+        console.log(
+            "Group updated:",
+            groups[index].name
+        );
+
+        return res.json({
+
+            success: true,
+
+            message:
+                "Group updated successfully.",
+
+            group: groups[index]
+
+        });
+
+    } catch (error) {
+
+        console.error(
+            "Update group error:",
+            error
+        );
+
+        return res.status(500).json({
+
+            success: false,
+
+            message:
+                "Could not update group."
+
+        });
+
+    }
+
+});
+// =========================
+// UPDATE USER PROFILE
+// =========================
+
+const groupMessagesDataFile = path.join(__dirname, "group-messages-data.json");
+function loadGroupMessagesData(){
+    try{
+        if (!fs.existsSync(groupMessagesDataFile)) {
+            fs.writeFileSync(groupMessagesDataFile, JSON.stringify({}, null, 2));
+        }
+        return JSON.parse(fs.readFileSync(groupMessagesDataFile, "utf8"));
+    } catch (error) {
+        console.error("Load group messages error:",error);
+        return{};
+    }
+}
+
+function saveGroupMessagesData(data) {
+    fs.writeFileSync(groupMessagesDataFile, JSON.stringify(data, null, 2));
+}
+
+app.get("/api/groups/:groupId/messages", (req, res) => {
+    try {
+        const groupId = String(req.params.groupId || "").trim();
+        if (!groupId) {
+            return res.status(400).json({
+                success: false,
+                message: "Group ID is required."
+            });
+        }
+        const messagesData = loadGroupMessagesData();
+        const messages = messagesData[groupId] || [];
+        return res.json({
+            success: true,
+            messages: messages
+        });
+    } catch (error) {
+        console.error("Load group messages error:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Could not load group messages."
+        });
+    }
+});
+
+app.post("/api/groups/:groupId/messages", (req, res) => {
+
+    try {
+
+        const groupId =
+            String(req.params.groupId || "").trim();
+
+        const {
+            senderId,
+            senderEmail,
+            senderName,
+            text
+        } = req.body;
+
+        if (!groupId) {
+            return res.status(400).json({
+                success: false,
+                message: "Group ID is required."
+            });
+        }
+
+        if (!senderId || !senderEmail || !text) {
+            return res.status(400).json({
+                success: false,
+                message: "Sender and message are required."
+            });
+        }
+
+        const messagesData =
+            loadGroupMessagesData();
+
+        if (!messagesData[groupId]) {
+            messagesData[groupId] = [];
+        }
+
+        const now = new Date();
+
+        const message = {
+
+            id: generateID(),
+
+            senderId: senderId,
+
+            senderEmail:
+                String(senderEmail)
+                    .trim()
+                    .toLowerCase(),
+
+            senderName:
+                senderName || "Unknown",
+
+            text: text.trim(),
+
+            time:
+                now.toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit"
+                }),
+
+            date:
+                now.toLocaleDateString(),
+
+            status: "sent"
+        };
+
+        messagesData[groupId].push(message);
+
+        saveGroupMessagesData(
+            messagesData
+        );
+
+        return res.json({
+            success: true,
+            message: message
+        });
+
+    } catch (error) {
+
+        console.error(
+            "Send group message error:",
+            error
+        );
+
+        return res.status(500).json({
+            success: false,
+            message: "Could not send group message."
+        });
+    }
+});
+
+app.post("/api/users/update", (req, res) => {
+    try {
+        const {
+            id,
+            email,
+            name,
+            status,
+            profileImage
+        } = req.body;
+
+        if (!id && !email) {
+            return res.status(400).json({
+                success: false,
+                message: "User ID or email is required."
+            });
+        }
+
+        const users = loadUsersData();
+
+        // Find by ID first
+        let index = -1;
+
+        if (id) {
+            index = users.findIndex(function (user) {
+                return String(user.id) === String(id);
+            });
+        }
+
+        // If ID doesn't match, find by email
+        if (index === -1 && email) {
+            index = users.findIndex(function (user) {
+                return (
+                    user.email &&
+                    user.email.toLowerCase().trim() ===
+                    email.toLowerCase().trim()
+                );
+            });
+        }
+
+        if (index === -1) {
+            console.log("User not found for update:", {
+                id: id,
+                email: email
+            });
+
+            return res.status(404).json({
+                success: false,
+                message: "User not found."
+            });
+        }
+
+        // Update only profile fields
+        users[index].name = name || users[index].name;
+        users[index].status =
+            status !== undefined
+                ? status
+                : users[index].status;
+
+        if (profileImage) {
+            users[index].profileImage = profileImage;
+        }
+
+        saveUsersData(users);
+
+        console.log("Profile updated:", users[index]);
+
+        return res.json({
+            success: true,
+            message: "Profile updated successfully.",
+            user: {
+                id: users[index].id,
+                name: users[index].name,
+                email: users[index].email,
+                profileImage:
+                    users[index].profileImage ||
+                    "images/user.png",
+                status:
+                    users[index].status ||
+                    "Hey there! I am using FlyChat."
+            }
+        });
+
+    } catch (error) {
+        console.error("Profile update error:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Could not update profile."
+        });
+    }
 });
 
 app.post("/api/users/register", (req, res) => {
@@ -978,6 +1447,7 @@ app.get("/", (req, res) => {
 
 const PORT = 3000;
 
-app.listen(PORT, () => {
+app.listen(PORT, "0.0.0.0", () => {
     console.log(`FlyChat Server running on http://localhost:${PORT}`);
+    console.log(`FlyChat Server available on your network at port ${PORT}`);
 });
