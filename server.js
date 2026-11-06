@@ -1,15 +1,19 @@
 const express = require("express");
 const path = require("path");
+const { randomUUID } = require("crypto");
 const multer = require("multer");
 const fs = require("fs");
-
+function generateID(){
+    return crypto.randomUUID();
+}
 require("dotenv").config();
 const crypto = require("crypto");
 const { Resend } = require("resend");
 const { type } = require("os");
 const { profile } = require("console");
 const e = require("express");
-const { findSourceMap } = require("module");
+const { findSourceMap, findPackageJSON } = require("module");
+const { json } = require("stream/consumers");
 const resend = new Resend(process.env.RESEND_API_KEY);
 const app = express();
 app.use(express.json({limit: "10mb" }));
@@ -51,7 +55,58 @@ function loadUsersData(){
 function saveUsersData(users){
     fs.writeFileSync(userDataFile, JSON.stringify(users, null, 2));
 }
+// =========================
+// REAL-TIME CLIENT CONNECTIONS
+// =========================
 
+const realtimeClients = new Set();
+
+function sendRealtimeEvent(type, data) {
+    const message = `data: ${JSON.stringify({
+        type: type,
+        ...data
+    })}\n\n`;
+
+    realtimeClients.forEach(function (client) {
+        try {
+            client.write(message);
+        } catch (error) {
+            realtimeClients.delete(client);
+        }
+    });
+}
+
+app.get("/api/realtime", (req, res) => {
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+
+    if (res.flushHeaders) {
+        res.flushHeaders();
+    }
+
+    realtimeClients.add(res);
+
+    console.log(
+        "Realtime client connected. Total:",
+        realtimeClients.size
+    );
+
+    res.write(
+        `data: ${JSON.stringify({
+            type: "connected"
+        })}\n\n`
+    );
+
+    req.on("close", function () {
+        realtimeClients.delete(res);
+
+        console.log(
+            "Realtime client disconnected. Total:",
+            realtimeClients.size
+        );
+    });
+});
 function loadGroupsData(){
     try{
         if (!fs.existsSync(groupDataFile)) {
@@ -84,9 +139,26 @@ function hashOtp(email, otp) {
         .digest("hex");
 }
 
+const passwordResetDataFile = path.join(__dirname, "Password-reset-data.json");
+function loadPasswordResetData(){
+    try{
+        if ((!fs.existsSync(passwordResetDataFile))) {
+            fs.writeFileSync(passwordResetDataFile,JSON.stringify({}, null, 2));
+        }
+        return JSON.parse(fs.readFileSync(passwordResetDataFile, "utf8") || "{}");
+    }catch(error){
+        console.error("Load password reset data error:",error);
+        return {};
+    }
+}
+
+function savePasswordResetData(data){
+    fs.writeFileSync(passwordResetDataFile, JSON.stringify(data, null, 2));
+}
+
 app.post("/api/auth/request-otp", async (req, res) => {
     const email = req.body?.email?.trim().toLowerCase();
-    
+
     if (
         typeof email !== "string" ||
         !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
@@ -101,7 +173,7 @@ app.post("/api/auth/request-otp", async (req, res) => {
         return res.status(500).json({
             success: false,
             message: "Email verification is not configured."
-        });        
+        });
     }
 
     const otp = generateOtp();
@@ -119,7 +191,7 @@ app.post("/api/auth/request-otp", async (req, res) => {
                 <p>Never share this code with anyone.</p>
             `
         });
-        
+
         if (error) {
             console.error("Resend error:", error);
             return res.status(502).json({
@@ -210,7 +282,7 @@ app.post("/api/auth/verify-otp", (req, res) => {
     }
 
     pendingOtps.delete(normalizedEmail);
-    
+
     return res.json({
         success: true,
         verified: true,
@@ -348,6 +420,25 @@ app.post("/api/chat/send", (req, res) => {
 
     saveChatData(chats);
 
+
+    console.log(
+        "Message saved:",
+        message
+    );
+
+
+    // =========================
+    // REAL-TIME MESSAGE EVENT
+    // =========================
+
+    sendRealtimeEvent(
+        "message-received",
+        {
+            senderEmail: senderEmail,
+            receiverEmail: receiverEmail,
+            message: message
+        }
+    );
 
     console.log(
         "Message saved:",
@@ -595,7 +686,7 @@ const storage = multer.diskStorage({
 
 });
 
-const upload = multer({storage, limits: {fileSize: 15 * 1024 * 1024}});
+const upload = multer({storage, limits: {fileSize: 5 * 1024 * 1024}});
 app.use("/uploads", express.static(uploadDir));
 app.post("/api/chat/upload", (req, res) => {
     upload.single("file")(req, res, (uploadError) => {
@@ -603,7 +694,7 @@ app.post("/api/chat/upload", (req, res) => {
             if (uploadError.code === "LIMIT_FILE_SIZE") {
                 return res.status(400).json({
                     success: false,
-                    message: "File size must be less than 15 MB."
+                    message: "File size must be less than 5 MB."
                 });
             }
             console.error("Upload error:", uploadError);
@@ -755,30 +846,115 @@ app.post("/api/chat/send-file", (req, res) => {
 
 });
 app.get("/api/users", (req, res) => {
-    try{
-        const users = loadUsersData();
-        const publicUsers= users.map(function(user){
-            return{
-                id: user.id,
-                name: user.name,
-                email: user.email,
-                profileImage: user.profileImage || "images/user.png",
-                status: user.status || "Hey there! I am using FlyChat."
-            };
-        });
-        return res.json({
-            success: true,
-            users: publicUsers
-        });
-    } catch (error) {
-        console.error("Load users error:", error);
-        return res.status(500).json({
-            success: false,
-            message: "Could not load users."
-        });
-    }
-});
 
+    try {
+
+        const viewerId =
+            String(req.query.viewerId || "").trim();
+
+        const privacyCandidates =
+            req.query.privacyCandidates === "true";
+
+        const users =
+            loadUsersData();
+
+        let visibleUsers;
+
+        /*
+         * Privacy page needs to see all accounts
+         * so the user can choose whom to allow.
+         */
+        if (privacyCandidates) {
+
+            visibleUsers = users;
+
+        }
+
+        /*
+         * Dashboard/search requests are filtered
+         * according to the target user's privacy.
+         */
+        else if (viewerId) {
+
+            visibleUsers =
+                users.filter(function (user) {
+
+                    return canViewProfile(
+                        viewerId,
+                        user.id
+                    );
+
+                });
+
+        }
+
+        /*
+         * Keep old behaviour if no viewerId
+         * was supplied.
+         */
+        else {
+
+            visibleUsers = users;
+
+        }
+
+
+        const publicUsers =
+            visibleUsers.map(function (user) {
+
+                return {
+
+                    id:
+                        user.id,
+
+                    name:
+                        user.name,
+
+                    email:
+                        user.email,
+
+                    profileImage:
+                        user.profileImage ||
+                        "images/user.png",
+
+                    status:
+                        user.status ||
+                        "Hey there! I am using FlyChat."
+
+                };
+
+            });
+
+
+        return res.json({
+
+            success: true,
+
+            users:
+                publicUsers
+
+        });
+
+
+    } catch (error) {
+
+        console.error(
+            "Load users error:",
+            error
+        );
+
+        return res.status(500).json({
+
+            success: false,
+
+            message:
+                "Could not load users."
+
+        });
+
+    }
+
+});
 app.post("/api/users/migrate", (req, res) => {
     try {
         const incomingUsers = req.body?.users;
@@ -894,18 +1070,68 @@ app.get("/api/groups", (req, res) => {
             loadGroupsData();
 
         const userGroups =
-            groups.filter(function(group) {
+            groups
+                .filter(function(group) {
 
-                return (
-                    Array.isArray(group.members) &&
-                    group.members.some(function(memberId) {
+                    return (
+                        Array.isArray(group.members) &&
+                        group.members.some(function(memberId) {
 
-                        return String(memberId) === userId;
+                            return String(memberId) === userId;
 
-                    })
-                );
+                        })
+                    );
 
-            });
+                })
+                .map(function(group) {
+
+                    const activity =
+                        group.lastActivityAt ||
+                        group.updatedAt ||
+                        group.createdAt ||
+                        new Date(0).toISOString();
+
+                    return {
+
+                        ...group,
+
+                        lastActivityAt:
+                            group.lastActivityAt ||
+                            group.updatedAt ||
+                            group.createdAt ||
+                            null,
+
+                        updatedAt:
+                            group.updatedAt ||
+                            group.createdAt ||
+                            null,
+
+                        _activityTime:
+                            activity
+
+                    };
+
+                })
+                .sort(function(a, b) {
+
+                    return (
+                        new Date(b._activityTime).getTime() -
+                        new Date(a._activityTime).getTime()
+                    );
+
+                })
+                .map(function(group) {
+
+                    const cleanGroup = {
+                        ...group
+                    };
+
+                    delete cleanGroup._activityTime;
+
+                    return cleanGroup;
+
+                });
+
 
         return res.json({
 
@@ -926,7 +1152,8 @@ app.get("/api/groups", (req, res) => {
 
             success: false,
 
-            message: "Could not load groups."
+            message:
+                "Could not load groups."
 
         });
 
@@ -1073,6 +1300,11 @@ app.put("/api/groups/:id", (req, res) => {
         const existingGroup =
             groups[index];
 
+
+        // =========================
+        // CHECK GROUP CREATOR
+        // =========================
+
         if (
             String(existingGroup.creatorId) !==
             String(updatedGroup.creatorId)
@@ -1089,24 +1321,75 @@ app.put("/api/groups/:id", (req, res) => {
 
         }
 
+
+        // =========================
+        // UPDATE GROUP
+        // =========================
+
+        const now =
+            new Date().toISOString();
+
         groups[index] = {
 
             ...existingGroup,
 
             ...updatedGroup,
 
-            id: existingGroup.id,
+            // Never allow ID to change
+            id:
+                existingGroup.id,
 
-            creatorId: existingGroup.creatorId
+            // Never allow creator to change
+            creatorId:
+                existingGroup.creatorId,
+
+            // IMPORTANT:
+            // This makes the edited group the latest activity
+            updatedAt:
+                now,
+
+            lastActivityAt:
+                now
 
         };
 
-        saveGroupsData(groups);
+
+        // =========================
+        // SAVE TO SERVER
+        // =========================
+
+        saveGroupsData(
+            groups
+        );
+
+
+        // =========================
+        // REALTIME UPDATE
+        // =========================
+
+        sendRealtimeEvent(
+            "group-updated",
+            {
+                groupId:
+                    groups[index].id,
+
+                group:
+                    groups[index]
+            }
+        );
+
 
         console.log(
             "Group updated:",
-            groups[index].name
+            groups[index].name,
+            groups[index].id,
+            groups[index].lastActivityAt
         );
+
+
+        // =========================
+        // RESPONSE
+        // =========================
 
         return res.json({
 
@@ -1115,9 +1398,11 @@ app.put("/api/groups/:id", (req, res) => {
             message:
                 "Group updated successfully.",
 
-            group: groups[index]
+            group:
+                groups[index]
 
         });
+
 
     } catch (error) {
 
@@ -1159,6 +1444,72 @@ function saveGroupMessagesData(data) {
     fs.writeFileSync(groupMessagesDataFile, JSON.stringify(data, null, 2));
 }
 
+const privacyDataFile = path.join(__dirname, "privacy-data.json");
+
+function loadPrivacyData() {
+    try{
+        if (!fs.existsSync(privacyDataFile)) {
+            fs.writeFileSync(privacyDataFile, JSON.stringify({}, null, 2));
+        }
+
+        return JSON.parse(
+            fs.readFileSync(privacyDataFile,"utf8")
+        );
+    } catch (error){
+        console.error("Load privacy data error:", error);
+        return {};
+    }
+}
+
+function savePrivacyData(data){
+    fs.writeFileSync(privacyDataFile, JSON.stringify(data, null, 2));
+}
+function canViewProfile(viewerId, targetUserId) {
+
+    const viewer =
+        String(viewerId || "").trim();
+
+    const target =
+        String(targetUserId || "").trim();
+
+    // A user can always see their own profile
+    if (viewer === target) {
+        return true;
+    }
+
+    const privacyData =
+        loadPrivacyData();
+
+    const privacy =
+        privacyData[target];
+
+    // No privacy setting = everyone
+    if (!privacy) {
+        return true;
+    }
+
+    // Everyone
+    if (privacy.visibility === "everyone") {
+        return true;
+    }
+
+    // Selected Accounts
+    if (privacy.visibility === "selected") {
+
+        return Array.isArray(privacy.selectedUsers) &&
+            privacy.selectedUsers
+                .map(String)
+                .includes(viewer);
+    }
+
+    // Contacts will be connected to chat history separately.
+    // For now don't hide users because of this option.
+    if (privacy.visibility === "contacts") {
+        return true;
+    }
+
+    return true;
+}
 app.get("/api/groups/:groupId/messages", (req, res) => {
     try {
         const groupId = String(req.params.groupId || "").trim();
@@ -1183,6 +1534,7 @@ app.get("/api/groups/:groupId/messages", (req, res) => {
     }
 });
 
+
 app.post("/api/groups/:groupId/messages", (req, res) => {
 
     try {
@@ -1194,7 +1546,11 @@ app.post("/api/groups/:groupId/messages", (req, res) => {
             senderId,
             senderEmail,
             senderName,
-            text
+            text,
+            type,
+            fileName,
+            fileUrl,
+            fileSize
         } = req.body;
 
         if (!groupId) {
@@ -1204,11 +1560,32 @@ app.post("/api/groups/:groupId/messages", (req, res) => {
             });
         }
 
-        if (!senderId || !senderEmail || !text) {
+        // Text message validation
+        // File messages are allowed without text.
+        if (
+            !senderId ||
+            !senderEmail ||
+            (
+                (!text || !String(text).trim()) &&
+                type !== "file"
+            )
+        ) {
             return res.status(400).json({
                 success: false,
                 message: "Sender and message are required."
             });
+        }
+
+        // File message validation
+        if (type === "file") {
+
+            if (!fileName || !fileUrl) {
+
+                return res.status(400).json({
+                    success: false,
+                    message: "File information is required."
+                });
+            }
         }
 
         const messagesData =
@@ -1222,36 +1599,122 @@ app.post("/api/groups/:groupId/messages", (req, res) => {
 
         const message = {
 
-            id: generateID(),
+            id: randomUUID(),
 
-            senderId: senderId,
+            senderId:
+                req.body.senderId,
 
             senderEmail:
-                String(senderEmail)
-                    .trim()
-                    .toLowerCase(),
+                req.body.senderEmail,
 
             senderName:
-                senderName || "Unknown",
+                req.body.senderName,
 
-            text: text.trim(),
+            type:
+                type || "text",
+
+            text:
+                text ? String(text).trim() : "",
+
+            fileName:
+                fileName || "",
+
+            fileUrl:
+                fileUrl || "",
+
+            fileSize:
+                fileSize || 0,
 
             time:
-                now.toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit"
-                }),
+                new Date().toLocaleTimeString(
+                    [],
+                    {
+                        hour: "2-digit",
+                        minute: "2-digit"
+                    }
+                ),
 
             date:
                 now.toLocaleDateString(),
 
-            status: "sent"
+            status:
+                "sent"
         };
-
         messagesData[groupId].push(message);
 
         saveGroupMessagesData(
             messagesData
+        );
+                // =========================
+        // UPDATE GROUP ACTIVITY
+        // =========================
+
+        const groups =
+            loadGroupsData();
+
+        const groupIndex =
+            groups.findIndex(function(group) {
+
+                return String(group.id) ===
+                    String(groupId);
+
+            });
+
+        if (groupIndex !== -1) {
+
+            const activityTime =
+                now.toISOString();
+
+            groups[groupIndex] = {
+
+                ...groups[groupIndex],
+
+                updatedAt:
+                    activityTime,
+
+                lastActivityAt:
+                    activityTime
+
+            };
+
+            saveGroupsData(groups);
+
+            console.log(
+                "Group activity updated:",
+                groupId,
+                activityTime
+            );
+
+            // Tell connected dashboard clients
+            // that this group has new activity.
+
+            if (typeof sendRealtimeEvent === "function") {
+
+                sendRealtimeEvent(
+                    "group-message",
+                    {
+                        groupId:
+                            groupId,
+
+                        group:
+                            groups[groupIndex],
+
+                        message:
+                            message
+                    }
+                );
+
+            }
+
+        }
+        console.log(
+            "Group message saved:",
+            {
+                groupId: groupId,
+                type: message.type,
+                sender: message.senderEmail,
+                fileName: message.fileName || null
+            }
         );
 
         return res.json({
@@ -1338,7 +1801,10 @@ app.post("/api/users/update", (req, res) => {
         saveUsersData(users);
 
         console.log("Profile updated:", users[index]);
-
+        sendRealtimeEvent("profile-updated", {
+            userId: users[index].id,
+            user: users[index]
+        });
         return res.json({
             success: true,
             message: "Profile updated successfully.",
@@ -1367,64 +1833,307 @@ app.post("/api/users/update", (req, res) => {
 
 app.post("/api/users/register", (req, res) => {
 
-    const name = req.body?.name?.trim();
-    const email = req.body?.email?.trim().toLowerCase();
-    const password = req.body?.password;
+    try {
 
-    if (!name || !email || !password) {
-        return res.status(400).json({
-            success: false,
-            message: "Name, email and password are required."
-        });
-    }
+        const name =
+            String(req.body?.name || "").trim();
 
-    const usersFile = path.join(__dirname, "users-data.json");
+        const email =
+            String(req.body?.email || "")
+                .trim()
+                .toLowerCase();
 
-    let users = [];
+        const password =
+            String(req.body?.password || "");
 
-    if (fs.existsSync(usersFile)) {
-        try {
-            users = JSON.parse(
-                fs.readFileSync(usersFile, "utf8")
-            );
-        } catch (error) {
+        if (!name || !email || !password) {
+
+            return res.status(400).json({
+                success: false,
+                message: "Name, email and password are required."
+            });
+
+        }
+
+        const usersFile =
+            path.join(__dirname, "users-data.json");
+
+        let users = [];
+
+        if (fs.existsSync(usersFile)) {
+
+            try {
+
+                const fileData =
+                    fs.readFileSync(
+                        usersFile,
+                        "utf8"
+                    );
+
+                users =
+                    JSON.parse(fileData || "[]");
+
+            } catch (error) {
+
+                console.error(
+                    "Error reading users-data.json:",
+                    error
+                );
+
+                users = [];
+            }
+        }
+
+        if (!Array.isArray(users)) {
             users = [];
         }
-    }
 
-    const exists = users.find(user =>
-        String(user.email).toLowerCase() === email
-    );
+        const exists =
+            users.find(function (user) {
 
-    if (exists) {
-        return res.status(409).json({
-            success: false,
-            message: "Email already registered."
+                return (
+                    user.email &&
+                    String(user.email)
+                        .trim()
+                        .toLowerCase() === email
+                );
+
+            });
+
+        if (exists) {
+
+            return res.status(409).json({
+                success: false,
+                message: "Email already registered."
+            });
+
+        }
+
+        const user = {
+
+            id:
+                "user_" +
+                Date.now().toString(36),
+
+            name:
+                name,
+
+            email:
+                email,
+
+            password:
+                password,
+
+            profileImage:
+                "images/user.png",
+
+            status:
+                "Hey there! I am using FlyChat."
+        };
+
+        users.push(user);
+
+        fs.writeFileSync(
+            usersFile,
+            JSON.stringify(
+                users,
+                null,
+                2
+            )
+        );
+
+        console.log(
+            "New user registered:",
+            {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                passwordLength: user.password.length
+            }
+        );
+
+        return res.json({
+
+            success: true,
+
+            user: {
+
+                id:
+                    user.id,
+
+                name:
+                    user.name,
+
+                email:
+                    user.email,
+
+                profileImage:
+                    user.profileImage,
+
+                status:
+                    user.status
+            }
+
         });
+
+    } catch (error) {
+
+        console.error(
+            "Registration error:",
+            error
+        );
+
+        return res.status(500).json({
+
+            success: false,
+
+            message:
+                "Could not register user."
+        });
+
     }
 
-    const user = {
-        id: "user_" + Date.now().toString(36),
-        name: name,
-        email: email,
-        profileImage: "images/user.png",
-        status: "Hey there! I am using FlyChat."
-    };
-
-    users.push(user);
-
-    fs.writeFileSync(
-        usersFile,
-        JSON.stringify(users, null, 2)
-    );
-
-    console.log("New user registered:", user);
-
-    return res.json({
-        success: true,
-        user: user
-    });
 });
+
+app.post("/api/auth/login", (req, res) => {
+
+    console.log("===== LOGIN REQUEST =====");
+
+    try {
+
+        const email =
+            String(req.body?.email || "")
+                .trim()
+                .toLowerCase();
+
+        const password =
+            String(req.body?.password || "");
+
+        console.log("Email:", email);
+        console.log(
+            "Password length:",
+            password.length
+        );
+
+        // =========================
+        // VALIDATION
+        // =========================
+
+        if (!email || !password) {
+
+            return res.status(400).json({
+                success: false,
+                message:
+                    "Email and password are required."
+            });
+        }
+
+        // =========================
+        // LOAD USERS
+        // =========================
+
+        const users =
+            loadUsersData();
+
+        // =========================
+        // FIND USER
+        // =========================
+
+        const user =
+            users.find(function (u) {
+
+                return (
+                    u.email &&
+                    String(u.email)
+                        .trim()
+                        .toLowerCase() === email &&
+                    String(u.password || "") === password
+                );
+
+            });
+
+        // =========================
+        // INVALID LOGIN
+        // =========================
+
+        if (!user) {
+
+            return res.status(401).json({
+                success: false,
+                message:
+                    "Invalid Email or Password."
+            });
+
+        }
+
+        // =========================
+        // PUBLIC USER
+        // DO NOT SEND PASSWORD
+        // =========================
+
+        const publicUser = {
+
+            id:
+                user.id,
+
+            name:
+                user.name,
+
+            email:
+                user.email,
+
+            profileImage:
+                user.profileImage ||
+                "images/user.png",
+
+            status:
+                user.status ||
+                "Hey there! I am using FlyChat."
+
+        };
+
+        console.log(
+            "Login successful:",
+            {
+                id: user.id,
+                name: user.name,
+                email: user.email
+            }
+        );
+
+        // =========================
+        // LOGIN RESPONSE
+        // =========================
+
+        return res.json({
+
+            success: true,
+
+            user:
+                publicUser
+
+        });
+
+    } catch (error) {
+
+        console.error(
+            "Login error:",
+            error
+        );
+
+        return res.status(500).json({
+
+            success: false,
+
+            message:
+                "Server login error."
+
+        });
+
+    }
+
+});
+
 app.use(express.static(path.join(__dirname, "client")));
 app.use("/upload", upload.single("file"), (req, res) => {
     if (!req.file){
@@ -1439,6 +2148,86 @@ app.use("/upload", upload.single("file"), (req, res) => {
         fileName: req.file.originalname,
         fileUrl: `/uploads/${req.file.filename}`
     });
+});
+
+app.get("/api/privacy/:userId", (req, res) => {
+    try{
+        const userId = String(req.params.userId || "").trim();
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                message: "User ID is required."
+            });
+        }
+        const privacyData = loadPrivacyData();
+        const privacy = privacyData[userId] || {
+            visibility: "everyone",
+            selectedUsers: []
+        };
+        return res.json({
+            success: true,
+            privacy: privacy
+        });
+    } catch (error) {
+        console.error("Load privacy error:", error);
+        return res.status(500).json({
+            success:false,
+            message: " Could not load privacy settings."
+        });
+    }
+});
+
+app.post("/api/privacy/:userId", (req, res) => {
+    try{
+        const userId = String(req.params.userId || "").trim();
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                message: "User ID is required."
+            });
+        }
+        const {
+            visibility,
+            selectedUsers
+        } = req.body;
+        const allowedVisibility = [
+            "everyone",
+            "contacts",
+            "selected"
+        ];
+        if (!allowedVisibility.includes(visibility)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid privacy option."
+            });
+        }
+
+        const users = Array.isArray(selectedUsers) ? selectedUsers.map(id => String(id)): [];
+        if (visibility === "selected" && users.length === 0) {
+            return res.status(400),json({
+                success: false,
+                message: "Please selected at least one account."
+            });
+        }
+        const privacyData = loadPrivacyData();
+        privacyData[userId] = {
+            visibility: visibility,
+            selectedUsers: users
+        };
+        savePrivacyData(privacyData);
+        console.log("Privacy settings updated:", userId, privacyData[userId]);
+        return res.json({
+            success: true,
+            message: "Privacy settings saved.",
+            privacy: privacyData[userId]
+        });
+    } catch (error){
+        console.error("Save privacy error:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Could not save privacy settings."
+        });
+    }
 });
 
 app.get("/", (req, res) => {

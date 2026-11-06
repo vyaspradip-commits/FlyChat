@@ -1,0 +1,437 @@
+/* =====================================================
+   FLYCHAT - EDIT GROUP PAGE
+   ===================================================== */
+
+html {
+    min-height: 100%;
+    height: auto !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+}
+
+body {
+    min-height: 100%;
+    height: auto !important;
+    margin: 0;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+}
+
+/* =====================================================
+   PAGE
+   ===================================================== */
+
+.edit-group-page {
+    width: 100%;
+    min-height: 100vh;
+    height: auto !important;
+
+    box-sizing: border-box;
+
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+
+    padding: 30px 15px 50px;
+
+    overflow: visible !important;
+}
+
+/* =====================================================
+   MAIN CARD
+   ===================================================== */
+
+.edit-group-container {
+    width: 100%;
+    max-width: 620px;
+
+    height: auto !important;
+    max-height: none !important;
+
+    box-sizing: border-box;
+
+    padding: 28px 30px 30px;
+
+    background: #ffffff;
+    border-radius: 18px;
+
+    overflow: visible !important;
+}
+
+/* =====================================================
+   TITLE
+   ===================================================== */
+
+.edit-group-container h1 {
+    margin: 0 0 25px;
+
+    text-align: center;
+
+    font-size: 30px;
+    line-height: 1.2;
+}
+
+/* =====================================================
+   GROUP IMAGE
+   ===================================================== */
+
+.edit-group-container .group-image-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    width: 100%;
+
+    margin-bottom: 25px;
+}
+
+.edit-group-container .group-image-preview {
+    display: block;
+
+    width: 140px !important;
+    height: 140px !important;
+
+    min-width: 140px !important;
+    min-height: 140px !important;
+
+    max-width: 140px !important;
+    max-height: 140px !important;
+
+    object-fit: cover;
+
+    border-radius: 50%;
+
+    margin: 0 auto 16px;
+}
+
+/* =====================================================
+   CHANGE IMAGE BUTTON
+   ===================================================== */
+
+.edit-group-container .group-image-section button {
+    width: auto;
+    min-width: 210px;
+
+    padding: 11px 22px;
+
+    border: none;
+    border-radius: 9px;
+
+    background: #2867e8;
+    color: white;
+
+    font-size: 15px;
+    font-weight: 600;
+
+    cursor: pointer;
+}
+
+.edit-group-container .group-image-section button:hover {
+    opacity: 0.9;
+}
+
+/* =====================================================
+   FORM
+   ===================================================== */
+
+.edit-group-container .form-group {
+    width: 100%;
+    margin-bottom: 20px;
+}
+
+.edit-group-container label {
+    display: block;
+
+    margin-bottom: 8px;
+
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.edit-group-container input[type="text"],
+.edit-group-container textarea {
+    display: block;
+
+    width: 100%;
+
+    box-sizing: border-box;
+
+    padding: 12px 14px;
+
+    border: 1px solid #d2d2d2;
+    border-radius: 10px;
+
+    background: #ffffff;
+
+    font-family: inherit;
+    font-size: 15px;
+
+    outline: none;
+}
+
+.edit-group-container input[type="text"]:focus,
+.edit-group-container textarea:focus {
+    border-color: #2867e8;
+}
+
+.edit-group-container textarea {
+    min-height: 110px;
+    resize: vertical;
+}
+
+/* =====================================================
+   GROUP MEMBERS TITLE
+   ===================================================== */
+
+.edit-group-container h2 {
+    margin: 25px 0 12px;
+
+    font-size: 20px;
+    line-height: 1.3;
+}
+
+/* =====================================================
+   MEMBER LIST
+   ===================================================== */
+
+.edit-group-container .member-list {
+    display: flex;
+    flex-direction: column;
+
+    width: 100%;
+
+    max-height: 300px;
+
+    box-sizing: border-box;
+
+    overflow-x: hidden;
+    overflow-y: auto;
+
+    margin: 0 0 24px;
+
+    padding: 5px;
+}
+
+/* =====================================================
+   MEMBER ROW
+   ===================================================== */
+
+.edit-group-container .member-item {
+    display: flex;
+    align-items: center;
+
+    width: 100%;
+    min-height: 64px;
+
+    box-sizing: border-box;
+
+    flex-shrink: 0;
+
+    gap: 12px;
+
+    padding: 9px 12px;
+    margin: 0 0 8px;
+
+    background: #f5f6f8;
+
+    border-radius: 10px;
+}
+
+/* =====================================================
+   MEMBER PROFILE IMAGE
+   ===================================================== */
+
+.edit-group-container .member-item img {
+    display: block;
+
+    width: 45px !important;
+    height: 45px !important;
+
+    min-width: 45px !important;
+    min-height: 45px !important;
+
+    max-width: 45px !important;
+    max-height: 45px !important;
+
+    flex: 0 0 45px;
+
+    object-fit: cover;
+
+    border-radius: 50%;
+}
+
+/* =====================================================
+   MEMBER INFORMATION
+   ===================================================== */
+
+.edit-group-container .member-info {
+    flex: 1 1 auto;
+
+    width: auto;
+    min-width: 0;
+
+    overflow: hidden;
+}
+
+.edit-group-container .member-info h4 {
+    display: block;
+
+    width: 100%;
+
+    margin: 0 0 3px;
+
+    font-size: 15px;
+    font-weight: 600;
+
+    line-height: 1.3;
+
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    word-break: normal;
+    overflow-wrap: normal;
+}
+
+.edit-group-container .member-info small {
+    display: block;
+
+    width: 100%;
+
+    color: #777;
+
+    font-size: 12px;
+    line-height: 1.3;
+
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    word-break: normal;
+    overflow-wrap: normal;
+}
+
+/* =====================================================
+   CHECKBOX
+   ===================================================== */
+
+.edit-group-container .group-member {
+    flex: 0 0 auto;
+
+    width: 20px !important;
+    height: 20px !important;
+
+    min-width: 20px !important;
+    min-height: 20px !important;
+
+    margin-left: auto;
+
+    cursor: pointer;
+}
+
+/* =====================================================
+   SAVE / CANCEL
+   ===================================================== */
+
+.edit-group-container .group-form-buttons {
+    display: flex;
+
+    width: 100%;
+
+    gap: 12px;
+
+    margin-top: 5px;
+}
+
+.edit-group-container .group-form-buttons button {
+    flex: 1;
+
+    min-height: 46px;
+
+    border: none;
+    border-radius: 10px;
+
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+
+    cursor: pointer;
+}
+
+.edit-group-container .group-form-buttons button:first-child {
+    background: #2867e8;
+    color: white;
+}
+
+.edit-group-container .group-form-buttons button:last-child {
+    background: #e9e9e9;
+    color: #333;
+}
+
+/* =====================================================
+   MOBILE
+   ===================================================== */
+
+@media (max-width: 600px) {
+
+    .edit-group-page {
+        min-height: 100vh;
+        padding: 15px 10px 40px;
+
+        display: block;
+
+        overflow: visible !important;
+    }
+
+    .edit-group-container {
+        width: 100%;
+        max-width: 100%;
+
+        margin: 0 auto;
+
+        padding: 22px 16px 25px;
+
+        border-radius: 15px;
+    }
+
+    .edit-group-container h1 {
+        font-size: 27px;
+        margin-bottom: 20px;
+    }
+
+    .edit-group-container .group-image-preview {
+        width: 120px !important;
+        height: 120px !important;
+
+        min-width: 120px !important;
+        min-height: 120px !important;
+
+        max-width: 120px !important;
+        max-height: 120px !important;
+    }
+
+    .edit-group-container .group-image-section button {
+        width: 100%;
+        max-width: 300px;
+    }
+
+    .edit-group-container .member-list {
+        max-height: 280px;
+    }
+
+    .edit-group-container .member-item {
+        min-height: 62px;
+
+        padding: 8px 10px;
+    }
+
+    .edit-group-container .group-form-buttons {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .edit-group-container .group-form-buttons button {
+        width: 100%;
+    }
+}

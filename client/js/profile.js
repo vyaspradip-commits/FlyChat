@@ -1,29 +1,91 @@
+﻿// =========================
+// LOAD PROFILE
+// =========================
+
 function loadProfile() {
-    let user = getCurrentUser();
-    if(!user){
+
+    const user = getCurrentUser();
+
+    if (!user) {
         console.log("No current user found.");
         return;
     }
-    const nameInput = document.getElementById("profileName");
-    const emailInput = document.getElementById("profileEmail");
-    const statusInput = document.getElementById("profileStatus");
-    const profileImage = document.getElementById("profileImage");
-    if(nameInput){
+
+    const nameInput =
+        document.getElementById("profileName");
+
+    const emailInput =
+        document.getElementById("profileEmail");
+
+    const statusInput =
+        document.getElementById("profileStatus");
+
+    const profileImage =
+        document.getElementById("profileImage");
+
+
+    // =========================
+    // LOAD NAME
+    // =========================
+
+    if (nameInput) {
         nameInput.value = user.name || "";
     }
-    if(emailInput){
+
+
+    // =========================
+    // LOAD EMAIL
+    // =========================
+
+    if (emailInput) {
         emailInput.value = user.email || "";
     }
-    if(statusInput){
-        statusInput.value = user.status || "Hey there! I am using Flychat.";
+
+
+    // =========================
+    // LOAD STATUS
+    // =========================
+
+    if (statusInput) {
+        statusInput.value =
+            user.status ||
+            "Hey there! I am using Flychat.";
     }
-    if (profileImage && user.profileImage) {
-        profileImage.src = user.profileImage;
+
+
+    // =========================
+    // LOAD PROFILE PICTURE
+    // =========================
+
+    if (profileImage) {
+
+        if (user.profileImage) {
+
+            profileImage.src =
+                user.profileImage;
+
+        } else {
+
+            // Keep the existing/default image
+            console.log(
+                "No profile picture found."
+            );
+        }
     }
-    console.log("Profile loaded:", user);
+
+
+    console.log(
+        "Profile loaded:",
+        user
+    );
 }
 
-function previewImage(){
+
+// =========================
+// PREVIEW PROFILE IMAGE
+// =========================
+
+function previewImage() {
 
     const fileInput =
         document.getElementById("imageUpload");
@@ -31,62 +93,99 @@ function previewImage(){
     const image =
         document.getElementById("profileImage");
 
-    if(!fileInput || !image){
+
+    if (!fileInput || !image) {
         return;
     }
 
-    const file = fileInput.files[0];
 
-    if(!file){
+    const file =
+        fileInput.files[0];
+
+
+    if (!file) {
         return;
     }
 
-    const reader = new FileReader();
 
-    reader.onload = function(e){
+    // Only allow images
 
-        const img = new Image();
+    if (!file.type.startsWith("image/")) {
 
-        img.onload = function(){
+        showAlert(
+            "Please select an image file."
+        );
+
+        fileInput.value = "";
+
+        return;
+    }
+
+
+    const reader =
+        new FileReader();
+
+
+    reader.onload = function (e) {
+
+        const img =
+            new Image();
+
+
+        img.onload = function () {
 
             const canvas =
                 document.createElement("canvas");
 
+
             const maxSize = 300;
 
-            let width = img.width;
-            let height = img.height;
 
-            if(width > height){
+            let width =
+                img.width;
 
-                if(width > maxSize){
+            let height =
+                img.height;
+
+
+            // =========================
+            // RESIZE IMAGE
+            // =========================
+
+            if (width > height) {
+
+                if (width > maxSize) {
 
                     height =
                         height * maxSize / width;
 
-                    width = maxSize;
-
+                    width =
+                        maxSize;
                 }
 
-            }
-            else{
+            } else {
 
-                if(height > maxSize){
+                if (height > maxSize) {
 
                     width =
                         width * maxSize / height;
 
-                    height = maxSize;
-
+                    height =
+                        maxSize;
                 }
-
             }
 
-            canvas.width = width;
-            canvas.height = height;
+
+            canvas.width =
+                width;
+
+            canvas.height =
+                height;
+
 
             const ctx =
                 canvas.getContext("2d");
+
 
             ctx.drawImage(
                 img,
@@ -96,32 +195,60 @@ function previewImage(){
                 height
             );
 
-            // Compress image
+
+            // =========================
+            // COMPRESS IMAGE
+            // =========================
+
             const compressedImage =
                 canvas.toDataURL(
                     "image/jpeg",
                     0.7
                 );
 
-            image.src = compressedImage;
+
+            // Show preview
+
+            image.src =
+                compressedImage;
+
 
         };
 
-        img.src = e.target.result;
+
+        img.src =
+            e.target.result;
 
     };
+
 
     reader.readAsDataURL(file);
 }
 
-async function saveProfile(){
 
-    let currentUser = getCurrentUser();
+// =========================
+// SAVE PROFILE
+// =========================
 
-    if(!currentUser){
-        showAlert("User not found.");
+async function saveProfile() {
+
+    const currentUser =
+        getCurrentUser();
+
+
+    if (!currentUser) {
+
+        showAlert(
+            "User not found."
+        );
+
         return;
     }
+
+
+    // =========================
+    // GET ELEMENTS
+    // =========================
 
     const nameInput =
         document.getElementById("profileName");
@@ -139,59 +266,101 @@ async function saveProfile(){
         document.getElementById("imageUpload");
 
 
-    if(!nameInput || !emailInput || !statusInput || !profileImage){
+    if (
+        !nameInput ||
+        !emailInput ||
+        !statusInput ||
+        !profileImage
+    ) {
+
+        console.error(
+            "Profile elements not found."
+        );
+
         return;
     }
 
 
-    let name =
+    // =========================
+    // GET VALUES
+    // =========================
+
+    const name =
         nameInput.value.trim();
 
-    let email =
+    const email =
         emailInput.value.trim().toLowerCase();
 
-    let status =
+    const status =
         statusInput.value.trim();
 
 
-    if(name === "" || email === ""){
-        showAlert("Name and Email are required.");
+    // =========================
+    // VALIDATION
+    // =========================
+
+    if (
+        name === "" ||
+        email === ""
+    ) {
+
+        showAlert(
+            "Name and Email are required."
+        );
+
         return;
     }
 
 
     // =========================
-    // SAVE BASIC PROFILE DATA
+    // GET TOKEN
     // =========================
 
-    currentUser.name =
-        name;
-
-    currentUser.email =
-        email;
-
-    currentUser.status =
-        status;
+    const token =
+        sessionStorage.getItem("token");
 
 
-    // =========================
-    // UPLOAD PROFILE IMAGE
-    // =========================
+    if (!token) {
 
-    if(
-        fileInput &&
-        fileInput.files &&
-        fileInput.files.length > 0
-    ){
+        showAlert(
+            "Session expired. Please login again."
+        );
 
-        const file =
-            fileInput.files[0];
+        return;
+    }
 
 
-        try{
+    try {
+
+        // =================================================
+        // STEP 1: UPLOAD PROFILE PICTURE IF SELECTED
+        // =================================================
+
+        if (
+            fileInput &&
+            fileInput.files &&
+            fileInput.files.length > 0
+        ) {
+
+            const file =
+                fileInput.files[0];
+
+
+            // Check file type
+
+            if (!file.type.startsWith("image/")) {
+
+                showAlert(
+                    "Please select an image file."
+                );
+
+                return;
+            }
+
 
             const formData =
                 new FormData();
+
 
             formData.append(
                 "file",
@@ -199,161 +368,88 @@ async function saveProfile(){
             );
 
 
-            const response =
+            console.log(
+                "Uploading profile picture..."
+            );
+
+
+            const uploadResponse =
                 await fetch(
-                    "/api/chat/upload",
+                    "/upload",
                     {
                         method: "POST",
+
+                        headers: {
+                            "Authorization":
+                                `Bearer ${token}`
+                        },
+
                         body: formData
                     }
                 );
 
 
-            const result =
-                await response.json();
+            const uploadResult =
+                await uploadResponse.json();
 
 
-            if(
-                !response.ok ||
-                !result.success
-            ){
+            console.log(
+                "Profile picture upload response:",
+                uploadResult
+            );
+
+
+            if (
+                !uploadResponse.ok ||
+                !uploadResult.success
+            ) {
 
                 console.error(
-                    "Profile image upload failed:",
-                    result
+                    "Profile picture upload failed:",
+                    uploadResult
                 );
 
+
                 showAlert(
-                    result.message ||
+                    uploadResult.message ||
                     "Unable to upload profile picture."
                 );
+
 
                 return;
             }
 
 
-            // Save server URL
-            currentUser.profileImage =
-                result.file.url;
+            // =================================================
+            // GET PROFILE PICTURE URL FROM SERVER
+            // =================================================
+
+            if (uploadResult.fileUrl) {
+                currentUser.profileImage = uploadResult.fileUrl;
+            } else {
+                showAlert("Profile picture uploaded, but URL was not returned.");
+                return;
+            }
+
+            profileImage.src = currentUser.profileImage;
+
+
+            // Update image immediately
+
+            profileImage.src =
+                currentUser.profileImage;
 
 
             console.log(
-                "Profile image uploaded:",
-                result.file.url
+                "Profile picture uploaded successfully:",
+                currentUser.profileImage
             );
-
-
-        }
-        catch(error){
-
-            console.error(
-                "Profile image upload error:",
-                error
-            );
-
-            showAlert(
-                "Unable to upload profile picture."
-            );
-
-            return;
         }
 
-    }
-    else{
 
-        // Keep existing profile image
-        currentUser.profileImage =
-            currentUser.profileImage ||
-            "images/user.png";
-
-    }
-
-
-    // =========================
-    // UPDATE LOCAL USERS
-    // =========================
-
-    let users =
-        loadData("users") || [];
-
-
-    let index =
-        users.findIndex(function(user){
-
-            return String(user.id) ===
-                   String(currentUser.id);
-
-        });
-
-
-    // Fallback: find by old email
-    if(index === -1){
-
-        index =
-            users.findIndex(function(user){
-
-                return (
-                    user.email &&
-                    user.email.toLowerCase() ===
-                    email
-                );
-
-            });
-
-    }
-
-
-    if(index === -1){
-
-        console.log(
-            "User not found in local users array."
-        );
-
-        showAlert(
-            "Could not find your account."
-        );
-
-        return;
-    }
-
-
-    // Keep original ID
-    currentUser.id =
-        users[index].id;
-
-
-    users[index] = {
-        ...users[index],
-        ...currentUser
-    };
-
-
-    saveData(
-        "users",
-        users
-    );
-
-
-    // =========================
-    // SAVE CURRENT USER
-    // =========================
-
-    setCurrentUser(
-        currentUser
-    );
-
-
-    console.log(
-        "Local profile saved:",
-        currentUser
-    );
-
-
-    // =========================
-    // UPDATE SERVER PROFILE
-    // =========================
-
-    try{
+        // =================================================
+        // STEP 2: UPDATE PROFILE INFORMATION
+        // =================================================
 
         const response =
             await fetch(
@@ -363,25 +459,25 @@ async function saveProfile(){
 
                     headers: {
                         "Content-Type":
-                            "application/json"
+                            "application/json",
+
+                        "Authorization":
+                            `Bearer ${token}`
                     },
 
                     body: JSON.stringify({
 
                         id:
-                            currentUser.id,
-
-                        name:
-                            currentUser.name,
+                            currentUser.id || "",
 
                         email:
-                            currentUser.email,
+                            currentUser.email || email,
 
-                        status:
-                            currentUser.status,
+                        name:
+                            name,
 
                         profileImage:
-                            currentUser.profileImage
+                            currentUser.profileImage || ""
 
                     })
                 }
@@ -392,48 +488,165 @@ async function saveProfile(){
             await response.json();
 
 
-        if(
+        console.log(
+            "Profile update response:",
+            result
+        );
+
+
+        if (
             !response.ok ||
             !result.success
-        ){
+        ) {
 
             console.error(
                 "Server profile update failed:",
                 result
             );
 
+
             showAlert(
                 result.message ||
-                "Profile saved locally, but server update failed."
+                "Could not update profile."
             );
+
 
             return;
         }
 
 
-        console.log(
-            "Server profile updated:",
-            result
+        // =================================================
+        // STEP 3: UPDATE CURRENT USER
+        // =================================================
+
+        currentUser.id =
+            result.user.id ||
+            result.user._id;
+
+
+        currentUser.name =
+            result.user.name;
+
+
+        currentUser.email =
+            result.user.email ||
+            email;
+
+
+        currentUser.profileImage =
+            result.user.profileImage ||
+            currentUser.profileImage ||
+            "";
+
+
+        // Keep status locally
+        // Note: your current User.js schema does not
+        // contain a "status" field.
+
+        currentUser.status =
+            status;
+
+
+        // =================================================
+        // STEP 4: UPDATE PROFILE IMAGE ON PAGE
+        // =================================================
+
+        if (
+            profileImage &&
+            currentUser.profileImage
+        ) {
+
+            profileImage.src =
+                currentUser.profileImage;
+        }
+
+
+        // =================================================
+        // STEP 5: UPDATE LOCAL USERS
+        // =================================================
+
+        const users =
+            loadData("users") || [];
+
+
+        const index =
+            users.findIndex(function (user) {
+
+                return (
+                    String(
+                        user.id ||
+                        user._id
+                    ) ===
+                    String(
+                        currentUser.id
+                    )
+                );
+
+            });
+
+
+        if (index !== -1) {
+
+            users[index] = {
+                ...users[index],
+                ...currentUser
+            };
+
+        } else {
+
+            users.push(
+                currentUser
+            );
+        }
+
+
+        saveData(
+            "users",
+            users
         );
 
+
+        // =================================================
+        // STEP 6: UPDATE LOGGED-IN USER
+        // =================================================
+
+        setCurrentUser(
+            currentUser
+        );
+
+
+        // =================================================
+        // SUCCESS
+        // =================================================
 
         showAlert(
             "Profile Updated Successfully"
         );
 
 
-    }
-    catch(error){
+        console.log(
+            "Profile saved:",
+            currentUser
+        );
+
+
+        // Clear selected file
+
+        if (fileInput) {
+            fileInput.value = "";
+        }
+
+
+    } catch (error) {
 
         console.error(
-            "Server profile update error:",
+            "Profile save error:",
             error
         );
 
+
         showAlert(
-            "Profile saved locally, but server could not be updated."
+            "Unable to connect to FlyChat server."
         );
-
     }
-
 }

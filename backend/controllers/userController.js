@@ -1,0 +1,3 @@
+const s=require("../services/userService");
+const run=fn=>async(req,res,next)=>{try{const data=await fn(req);res.json({success:true,...(Array.isArray(data)?{count:data.length,data}:{data})});}catch(e){next(e)}};
+module.exports={getAllUsers:run(()=>s.getAllUsers()),getUserById:run(req=>s.getUserById(req.params.id)),getProfile:run(req=>s.getProfile(req.user.uid)),updateProfile:run(req=>s.updateProfile(req.user.uid,req.body)),deleteUser:run(req=>{if(req.params.id!==req.user.uid&&req.user.role!=="admin")throw Object.assign(new Error("Cannot delete another user"),{status:403});return s.deleteUser(req.params.id)}),searchUsers:run(req=>s.searchUsers(req.query.q)),updateStatus:run(req=>s.updateStatus(req.user.uid,req.body.status))};

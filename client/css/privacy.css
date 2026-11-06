@@ -161,3 +161,101 @@ body.dark-mode .back-privacy-btn {
         text-overflow: ellipsis;
     }
 }
+
+/* =========================
+   SELECT ACCOUNTS SCROLL AREA
+   ========================= */
+
+#selectedUsersBox {
+    margin-top: 25px;
+}
+
+#privacyUserList {
+    max-height: 320px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 5px 8px 5px 0;
+}
+
+.privacy-user-item {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+
+    width: 100%;
+    min-height: 76px;
+    box-sizing: border-box;
+
+    padding: 10px 14px;
+    margin-bottom: 10px;
+
+    background: #f5f5f5;
+    border: 1px solid #ddd;
+    border-radius: 12px;
+}
+
+.privacy-avatar {
+    width: 52px;
+    height: 52px;
+
+    flex: 0 0 52px;
+
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.privacy-user-info {
+    flex: 1;
+    min-width: 0;
+
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.privacy-user-info b {
+    font-size: 17px;
+    color: #202c33;
+}
+
+.privacy-user-info small {
+    font-size: 14px;
+    color: #667781;
+
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.privacy-user {
+    width: 28px;
+    height: 28px;
+
+    flex: 0 0 28px;
+
+    margin-left: auto;
+
+    cursor: pointer;
+    accent-color: #25d366;
+}
+
+.privacy-user-search {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 12px 14px;
+    margin: 10px 0 15px;
+
+    border: 1px solid #ccc;
+    border-radius: 8px;
+
+    font-size: 15px;
+    outline: none;
+}
+
+.privacy-user-search:focus {
+    border-color: #4f46e5;
+}
+
+.privacy-user-search::placeholder {
+    color: #888;
+}

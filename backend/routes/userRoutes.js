@@ -1,0 +1,2 @@
+const r=require("express").Router();const c=require("../controllers/userController");const {verifyToken}=require("../middleware/authMiddleware");const {validateProfile}=require("../middleware/validationMiddleware");
+r.get("/search",verifyToken,c.searchUsers);r.get("/profile",verifyToken,c.getProfile);r.put("/profile",verifyToken,validateProfile,c.updateProfile);r.put("/status",verifyToken,c.updateStatus);r.get("/",verifyToken,c.getAllUsers);r.get("/:id",verifyToken,c.getUserById);r.delete("/:id",verifyToken,c.deleteUser);module.exports=r;

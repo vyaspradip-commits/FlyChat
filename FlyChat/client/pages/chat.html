@@ -1,0 +1,92 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat | FlyChat</title>
+    <link rel="stylesheet" href="/css/chat.css">
+</head>
+<body>
+    <header class="topbar">
+        <a class="brand" href="/">FlyChat</a>
+        <div class="topbar-actions">
+            <span id="userLabel" class="user-label"></span>
+            <span id="socketStatus" class="socket-status">Live updates connecting…</span>
+            <a class="home-link" href="/">Home</a>
+            <button id="logoutButton" class="logout-button" type="button">Log out</button>
+        </div>
+    </header>
+
+    <main class="chat-layout">
+        <aside class="inbox-panel" aria-label="Conversations">
+            <div class="inbox-header">
+                <div>
+                    <p class="eyebrow">YOUR MESSAGES</p>
+                    <h1>Inbox</h1>
+                    <div class="user-search">
+                        <input
+                            type="text"
+                            id="userSearchInput"
+                            placeholder="Search people by name or email..."
+                            autocomplete="off"
+                        >
+                        <div id="userSearchResults" class="user-search-results"></div>
+                    </div>
+
+                </div>
+
+                <div class="inbox-actions">
+                    <button id="createGroupButton" class="refresh-button" type="button">
+                        + Create Group
+                    </button>
+
+                    <button id="refreshButton" class="refresh-button" type="button" aria-label="Refresh conversations">
+                        Refresh
+                    </button>
+                </div>
+            </div>
+
+            <div id="statusMessage" class="status-message" role="status" aria-live="polite"></div>
+            <div id="conversationList" class="conversation-list"></div>
+        </aside>
+
+        <section class="chat-panel" aria-label="Chat">
+            <div id="emptyState" class="empty-state">
+                <div class="empty-icon" aria-hidden="true">✦</div>
+                <h2>Select a conversation</h2>
+                <p>Your conversations will appear here. Choose one to read and send messages.</p>
+            </div>
+
+            <div id="conversationView" class="conversation-view" hidden>
+                <header class="conversation-header">
+                    <div id="chatAvatar" class="avatar" aria-hidden="true"></div>
+                    <div class="conversation-heading">
+                        <h2 id="chatTitle"></h2>
+                        <p id="chatSubtitle">Messages are delivered in real time</p>
+                    </div>
+                </header>
+
+                <div id="messages" class="messages" aria-live="polite" aria-label="Messages"></div>
+
+                <form id="messageForm" class="message-form">
+                    <label class="sr-only" for="messageInput">Write a message</label>
+                    <input
+                        type="file"
+                        id="fileInput"
+                        accept="*/*"
+                        hidden
+                    >
+                    <button id="attachButton" type="button" disabled title="Attach an image or file">📎</button>
+                    <textarea id="messageInput" rows="1" maxlength="2000" placeholder="Write a message…" disabled></textarea>
+                    <button id="sendButton" type="submit" disabled>Send</button>
+                </form>
+
+                <p class="input-hint">Press Enter to send · Shift + Enter for a new line</p>
+            </div>
+        </section>
+    </main>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/js/chat.js"></script>
+</body>
+</html>

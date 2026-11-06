@@ -826,7 +826,7 @@ body:not(.dark) .sidebar li{
 .chat-item{
     background: white;
     padding: 15px;
-    margin: 15px 0;
+    margin: 0;
     border-radius: 15px;
     display: flex;
     align-items: center;
@@ -1238,4 +1238,24 @@ body.dark-mode.profile-page input[type="file"] {
 body.dark-mode.profile-page button {
     background: #2a3942;
     color: white;
+}
+
+/* =========================================
+   CHAT LIST - REMOVE SPACE BELOW SEARCH
+   ========================================= */
+
+.chat-top {
+    padding-bottom: 0 !important;
+}
+
+#chatContainer {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+#chatContainer > a:first-child .chat-item,
+#chatContainer > .chat-item:first-child,
+#chatContainer > .chat-user:first-child,
+#chatContainer > .group-chat-item:first-child {
+    margin-top: 0 !important;
 }

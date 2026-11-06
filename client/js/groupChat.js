@@ -97,12 +97,15 @@ function loadGroupInformation() {
     );
 }
 
-
 // =========================
-// LOAD GROUP MESSAGES
+// GROUP MESSAGE SYNC
 // =========================
 
-function loadGroupMessages() {
+let renderedGroupMessageIds = new Set();
+let lastSyncedGroupId = null;
+let groupSyncInProgress = false;
+
+async function loadGroupMessages() {
 
     const box =
         document.getElementById("groupMessages");
@@ -111,31 +114,180 @@ function loadGroupMessages() {
         return;
     }
 
-    const key =
-        getCurrentGroupKey();
+    const groupId =
+        sessionStorage.getItem("currentGroupId");
 
-    if (!key) {
+    if (!groupId) {
+        console.error("Group ID not found.");
         return;
     }
 
-    box.innerHTML = "";
+    // =========================================
+    // NEW / DIFFERENT GROUP
+    // =========================================
 
-    const messages =
-        loadData(key) || [];
+    if (lastSyncedGroupId !== groupId) {
 
-    console.log(
-        "Group messages:",
-        messages
-    );
+        lastSyncedGroupId =
+            groupId;
 
-    messages.forEach(function(message) {
+        renderedGroupMessageIds =
+            new Set();
 
-        createGroupMessage(message);
+        box.innerHTML = "";
+    }
 
-    });
+    // =========================================
+    // PREVENT DUPLICATE REQUESTS
+    // =========================================
 
-    box.scrollTop =
-        box.scrollHeight;
+    if (groupSyncInProgress) {
+        return;
+    }
+
+    groupSyncInProgress = true;
+
+    try {
+
+        const response =
+            await fetch(
+                `/api/groups/${encodeURIComponent(groupId)}/messages?t=${Date.now()}`,
+                {
+                    method: "GET",
+                    cache: "no-store",
+                    headers: {
+                        "Cache-Control": "no-cache"
+                    }
+                }
+            );
+
+        const result =
+            await response.json();
+
+        if (
+            !response.ok ||
+            !result.success
+        ) {
+
+            console.error(
+                "Could not load group messages:",
+                result.message
+            );
+
+            return;
+        }
+
+        const messages =
+            Array.isArray(result.messages)
+                ? result.messages
+                : [];
+
+        let newMessageAdded = false;
+
+        // =========================================
+        // ADD ONLY NEW MESSAGES
+        // =========================================
+
+        messages.forEach(function(message) {
+
+            const messageId =
+                String(
+                    message.id ||
+                    message._id ||
+                    (
+                        message.senderId +
+                        "_" +
+                        message.date +
+                        "_" +
+                        message.time +
+                        "_" +
+                        message.text
+                    )
+                );
+
+            if (
+                renderedGroupMessageIds.has(
+                    messageId
+                )
+            ) {
+                return;
+            }
+
+            renderedGroupMessageIds.add(
+                messageId
+            );
+
+            createGroupMessage(
+                message
+            );
+
+            newMessageAdded = true;
+        });
+
+        // =========================================
+        // NEW GROUP MESSAGE
+        // MOVE THIS GROUP TO TOP
+        // =========================================
+
+        if (newMessageAdded) {
+
+            box.scrollTop =
+                box.scrollHeight;
+
+            const chatContainer =
+                document.getElementById(
+                    "chatContainer"
+                );
+
+            if (chatContainer) {
+
+                const groupItem =
+                    chatContainer.querySelector(
+                        `[data-chat-type="group"][data-group-id="${CSS.escape(String(groupId))}"]`
+                    );
+
+                if (groupItem) {
+
+                    // Update latest activity
+                    groupItem.dataset.lastActivity =
+                        new Date().toISOString();
+
+                    // IMPORTANT:
+                    // Move only inside chatContainer.
+                    // NEVER prepend to .chat-list,
+                    // otherwise it can appear above
+                    // the search bar.
+
+                    chatContainer.prepend(
+                        groupItem
+                    );
+
+                    console.log(
+                        "Latest group moved to top:",
+                        groupId
+                    );
+                }
+                else {
+
+                    console.log(
+                        "Group chat item not found:",
+                        groupId
+                    );
+                }
+            }
+        }
+
+    } catch (error) {
+
+        console.error(
+            "Load group messages error:",
+            error
+        );
+
+    } finally {
+
+        groupSyncInProgress = false;
+    }
 }
 
 
@@ -143,7 +295,7 @@ function loadGroupMessages() {
 // SEND GROUP MESSAGE
 // =========================
 
-function sendGroupMessage() {
+async function sendGroupMessage() {
 
     const input =
         document.getElementById(
@@ -161,10 +313,11 @@ function sendGroupMessage() {
         return;
     }
 
-    const key =
-        getCurrentGroupKey();
+    const groupId =
+        currentGroupId ||
+        sessionStorage.getItem("currentGroupId");
 
-    if (!key) {
+    if (!groupId) {
 
         alert(
             "Group ID not found."
@@ -185,57 +338,86 @@ function sendGroupMessage() {
         return;
     }
 
-    const now =
-        new Date();
+    try {
 
-    const message = {
+        const response =
+            await fetch(
+                `/api/groups/${encodeURIComponent(groupId)}/messages`,
+                {
+                    method: "POST",
 
-        id:
-            generateID(),
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
 
-        senderId:
-            currentUser.id,
+                    body: JSON.stringify({
+                        senderId:
+                            currentUser.id,
 
-        senderEmail:
-            currentUser.email,
+                        senderEmail:
+                            currentUser.email,
 
-        senderName:
-            currentUser.name,
+                        senderName:
+                            currentUser.name,
 
-        text:
-            text,
+                        text:
+                            text
+                    })
+                }
+            );
 
-        time:
-            now.toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit"
-            }),
+        const result =
+            await response.json();
 
-        date:
-            now.toLocaleDateString(),
+        if (!response.ok || !result.success) {
 
-        status:
-            "sent"
+            console.error(
+                "Group message send failed:",
+                result
+            );
 
-    };
+            alert(
+                result.message ||
+                "Unable to send message."
+            );
 
+            return;
+        }
 
-    const messages =
-        loadData(key) || [];
+        // =========================
+        // UPDATE CHAT LIST
+        // MESSAGE SUCCESSFULLY SENT
+        // =========================
 
-    messages.push(message);
+        updateChatActivityAndReorder(
+            "group",
+            groupId
+        );
 
-    saveData(
-        key,
-        messages
-    );
+        console.log(
+            "Group message sent:",
+            result.message
+        );
 
+        createGroupMessage(
+            result.message
+        );
 
-    createGroupMessage(message);
+        input.value = "";
 
-    input.value = "";
+        input.focus();
 
-    input.focus();
+    } catch (error) {
+
+        console.error(
+            "Send group message error:",
+            error
+        );
+
+        alert(
+            "Unable to connect to FlyChat server."
+        );
+    }
 }
 
 
@@ -253,7 +435,9 @@ function createGroupMessage(message) {
     if (!box) {
         return;
     }
-
+    if (message.id) {
+        renderedGroupMessageIds.add(String(message.id));
+    }
     const currentUser =
         getCurrentUser();
 
@@ -314,7 +498,7 @@ function createGroupMessage(message) {
 
     const div =
         document.createElement("div");
-    
+
     div.className = isMine ? "message sent" : "message received";
     if (message.type === "file") {
 
@@ -479,38 +663,48 @@ function initializeGroupEnter() {
 
 function initializeGroupPage() {
 
-    console.log(
-        "Initializing group page..."
-    );
-
+    console.log("Initializing group page...");
 
     loadGroupInformation();
-
     loadGroupMessages();
+    if (window.groupMessageSyncTimer) {
+        clearInterval(
+            window.groupMessageSyncTimer
+        );
+    }
 
+    window.groupMessageSyncTimer =
+        setInterval(function () {
+
+            loadGroupMessages();
+
+        }, 1500);
     initializeGroupEnter();
 
     if (typeof initializeGroupEmoji === "function") {
         initializeGroupEmoji();
     }
+
     if (typeof initializeGroupFileSharing === "function") {
         initializeGroupFileSharing();
     }
+
     const sendButton =
-        document.getElementById(
-            "groupSendButton"
-        );
+        document.getElementById("groupSendButton");
 
     if (sendButton) {
-
         sendButton.addEventListener(
             "click",
             sendGroupMessage
         );
-
     }
 
+    // Refresh messages from server every 1.5 seconds
+    setInterval(function () {
+        loadGroupMessages();
+    }, 1500);
 }
+
 const emojiBtn = document.getElementById("groupEmojiBtn");
 const emojiBox = document.getElementById("groupEmojiBox");
 const fileBtn = document.getElementById("groupAttachBtn");
@@ -538,7 +732,32 @@ if (fileBtn && fileInput) {
     };
 }
 
-document.addEventListener(
-    "DOMContentLoaded",
-    initializeGroupPage
-);
+let groupMessageRefreshInterval = null;
+
+function initializeGroupPage() {
+    console.log("Initializing group page...");
+    loadGroupInformation();
+    loadGroupMessages();
+    setInterval(function(){
+        loadGroupMessages()
+    }, 1500);
+    initializeGroupEnter();
+    if (typeof initializeGroupEmoji === "function") {
+        initializeGroupEmoji();
+    }
+    if (typeof initializeGroupFileSharing === "function") {
+        initializeGroupFileSharing();
+    }
+    const sendButton = document.getElementById("groupSendButton");
+    if (sendButton) {
+        sendButton.addEventListener("click", sendGroupMessage);
+    }
+    if (groupMessageRefreshInterval) {
+        clearInterval(groupMessageRefreshInterval);
+    }
+    groupMessageRefreshInterval = setInterval(function() {
+        loadGroupMessages();
+    }, 1500);
+}
+
+document.addEventListener("DOMContentLoaded", initializeGroupPage);

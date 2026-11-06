@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>FlyChat</title>
+
+    <link rel="stylesheet" href="css/home.css">
+</head>
+
+
+<body>
+
+    <nav class="navbar">
+
+        <div class="logo">
+            FlyChat
+        </div>
+
+        <div  class="nav-links" id="userArea"></div>
+
+    </nav>
+
+
+    <main class="hero">
+
+        <div class="hero-content">
+
+            <h1>
+                Connect. Chat. Share.
+                <span>AI.</span>
+            </h1>
+
+            <p>
+                FlyChat is a modern communication platform
+                where you can connect with friends, send
+                messages, create groups and use AI assistance.
+            </p>
+
+            <div class="hero-buttons">
+
+                <a href="pages/register.html"
+                   class="primary-btn">
+                    Get Started
+                </a>
+
+                <a href="pages/login.html"
+                   class="secondary-btn">
+                    Login
+                </a>
+
+            </div>
+
+        </div>
+
+
+        <div class="hero-card">
+
+            <div class="chat-header">
+                FlyChat
+            </div>
+
+            <div class="messages">
+
+                <div class="message received">
+                    Hey! Welcome to FlyChat 👋
+                </div>
+
+                <div class="message sent">
+                    Hello! This looks great 🚀
+                </div>
+
+                <div class="message received">
+                    Chat with friends and AI.
+                </div>
+
+            </div>
+
+            <div class="chat-input">
+
+                <input
+                    type="text"
+                    placeholder="Type a message..."
+                    disabled
+                >
+
+                <button disabled>
+                    Send
+                </button>
+
+            </div>
+
+        </div>
+
+    </main>
+
+
+    <footer>
+        <p>
+            FlyChat Minor Project | Diploma Computer Engineering
+        </p>
+    </footer>
+
+    <script>
+        const userArea = document.getElementById("userArea");
+
+        const savedUser = localStorage.getItem("user");
+
+        if (savedUser) {
+            const user = JSON.parse(savedUser);
+
+            userArea.innerHTML = `
+                <span>Welcome, ${user.name}</span>
+                <a href="pages/chat.html" class="login-btn">Open Chat</a>
+                <button onclick="logout()">Logout</button>
+            `;
+        } else {
+            userArea.innerHTML = `
+                <a href="pages/login.html" class="login-btn">Login</a>
+                <a href="pages/register.html" class="register-btn">Create Account</a>
+            `;
+        }
+
+        function logout() {
+            localStorage.removeItem("user");
+            localStorage.removeItem("token");
+            window.location.reload();
+        }
+    </script>
+
+</body>
+
+</html>

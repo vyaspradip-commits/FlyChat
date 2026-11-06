@@ -1,0 +1,12 @@
+require("dotenv").config();
+const express=require("express");const http=require("http");const cors=require("cors");const morgan=require("morgan");const path=require("path");
+const {initializeSocket}=require("./config/socket");const {notFound,errorHandler}=require("./middleware/errorMiddleware");
+const app=express();const server=http.createServer(app);initializeSocket(server);
+const origins=(process.env.CLIENT_ORIGIN||"*").split(",").map(x=>x.trim());app.use(cors({origin:origins.includes("*")?"*":origins,credentials:!origins.includes("*")}));app.use(express.json({limit:"2mb"}));app.use(express.urlencoded({extended:true}));app.use(morgan("dev"));app.use("/uploads",express.static(path.join(__dirname,"uploads")));
+app.get("/",(req,res)=>res.json({success:true,project:"FlyChat Backend",version:"1.1.0",message:"Backend server is running"}));
+app.get("/health",(req,res)=>res.status(200).json({success:true,status:"OK",server:"running",timestamp:new Date().toISOString()}));
+app.use("/api/auth",require("./routes/authRoutes"));app.use("/api/users",require("./routes/userRoutes"));app.use("/api/chats",require("./routes/chatRoutes"));app.use("/api/groups",require("./routes/groupRoutes"));app.use("/api/uploads",require("./routes/uploadRoutes"));app.use("/api/notifications",require("./routes/notificationRoutes"));
+app.use(notFound);app.use(errorHandler);
+const PORT=Number(process.env.PORT)||5000;server.listen(PORT,()=>console.log(`FlyChat Backend listening on http://localhost:${PORT}`));
+process.on("unhandledRejection",err=>console.error("Unhandled rejection:",err));
+module.exports={app,server};

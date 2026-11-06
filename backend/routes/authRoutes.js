@@ -1,0 +1,2 @@
+const r=require("express").Router();const c=require("../controllers/authController");const {verifyToken}=require("../middleware/authMiddleware");const {validateRegister,validateLogin}=require("../middleware/validationMiddleware");
+r.post("/register",validateRegister,c.register);r.post("/login",validateLogin,c.login);r.post("/forgot-password",c.forgotPassword);r.post("/verify-email",verifyToken,c.verifyEmail);r.post("/logout",verifyToken,c.logout);r.get("/me",verifyToken,c.me);module.exports=r;

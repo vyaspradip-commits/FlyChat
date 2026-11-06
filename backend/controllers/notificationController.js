@@ -1,0 +1,3 @@
+const s=require("../services/notificationService");
+const run=(fn,status=200)=>async(req,res,next)=>{try{const data=await fn(req);res.status(status).json({success:true,data});}catch(e){next(e)}};
+module.exports={sendNotification:run(req=>s.sendNotification(req.body,req.user.uid),201),getNotifications:run(req=>s.getNotifications(req.user.uid)),getNotificationById:run(req=>s.getNotificationById(req.params.id,req.user.uid)),markAsRead:run(req=>s.markAsRead(req.params.id,req.user.uid)),deleteNotification:run(req=>s.deleteNotification(req.params.id,req.user.uid)),deleteAllNotifications:run(req=>s.deleteAllNotifications(req.user.uid)),getUnreadCount:run(req=>s.getUnreadCount(req.user.uid))};

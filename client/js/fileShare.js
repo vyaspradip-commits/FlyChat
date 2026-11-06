@@ -238,170 +238,6 @@ async function sendPrivateFile(file) {
         getChatUser();
 
     if (!currentUser || !chatUser) {
-
-        alert("Chat user information not found.");
-
-        return;
-    }
-
-    try {
-
-        // =========================
-        // UPLOAD FILE
-        // =========================
-
-        const formData =
-            new FormData();
-
-        formData.append(
-            "file",
-            file
-        );
-
-        const uploadResponse =
-            await fetch(
-                "/api/chat/upload",
-                {
-                    method: "POST",
-                    body: formData
-                }
-            );
-
-        const uploadResult =
-            await uploadResponse.json();
-
-        console.log(
-            "Private file upload result:",
-            uploadResult
-        );
-
-        if (
-            !uploadResponse.ok ||
-            !uploadResult.success
-        ) {
-
-            alert(
-                uploadResult.message ||
-                "Unable to upload file."
-            );
-
-            return;
-        }
-
-
-        // =========================
-        // SAVE FILE MESSAGE
-        // =========================
-
-        const fileData =
-            uploadResult.file;
-
-        const sendResponse =
-            await fetch(
-                "/api/chat/send-file",
-                {
-
-                    method: "POST",
-
-                    headers: {
-                        "Content-Type":
-                            "application/json"
-                    },
-
-                    body: JSON.stringify({
-
-                        senderEmail:
-                            currentUser.email,
-
-                        receiverEmail:
-                            chatUser.email,
-
-                        fileName:
-                            fileData.name,
-
-                        fileUrl:
-                            fileData.url,
-
-                        fileSize:
-                            fileData.size,
-
-                        fileType:
-                            fileData.type
-
-                    })
-
-                }
-            );
-
-
-        const sendResult =
-            await sendResponse.json();
-
-        console.log(
-            "Private file message result:",
-            sendResult
-        );
-
-
-        if (
-            !sendResponse.ok ||
-            !sendResult.success
-        ) {
-
-            alert(
-                sendResult.message ||
-                "File message could not be sent."
-            );
-
-            return;
-        }
-
-
-        // =========================
-        // SHOW FILE IMMEDIATELY
-        // =========================
-
-        const box =
-            document.getElementById(
-                "messages"
-            );
-
-        if (box) {
-
-            createPrivateMessage(
-                sendResult.message
-            );
-
-        }
-
-    }
-    catch (error) {
-
-        console.error(
-            "Private file sharing error:",
-            error
-        );
-
-        alert(
-            "Unable to send file."
-        );
-    }
-}
-
-
-// =========================
-// SEND PRIVATE FILE
-// =========================
-
-async function sendPrivateFile(file) {
-
-    const currentUser =
-        getCurrentUser();
-
-    const chatUser =
-        getChatUser();
-
-    if (!currentUser || !chatUser) {
         alert("Chat user information not found.");
         return;
     }
@@ -609,36 +445,29 @@ async function sendGroupFile(file) {
     const currentUser =
         getCurrentUser();
 
-
     if (!currentUser) {
-
-        alert(
-            "Please login first."
-        );
-
+        alert("Please login first.");
         return;
     }
-
 
     const groupId =
-        sessionStorage.getItem(
-            "currentGroupId"
-        );
-
+        sessionStorage.getItem("currentGroupId");
 
     if (!groupId) {
-
-        alert(
-            "Group ID not found."
-        );
-
+        alert("Group ID not found.");
         return;
     }
 
+    if (!file) {
+        return;
+    }
 
     try {
 
-        // Upload physical file
+        // =========================
+        // 1. UPLOAD PHYSICAL FILE
+        // =========================
+
         const formData =
             new FormData();
 
@@ -646,7 +475,6 @@ async function sendGroupFile(file) {
             "file",
             file
         );
-
 
         const uploadResponse =
             await fetch(
@@ -657,10 +485,13 @@ async function sendGroupFile(file) {
                 }
             );
 
-
         const uploadResult =
             await uploadResponse.json();
 
+        console.log(
+            "GROUP FILE UPLOAD:",
+            uploadResult
+        );
 
         if (
             !uploadResponse.ok ||
@@ -676,63 +507,89 @@ async function sendGroupFile(file) {
         }
 
 
-        // Create group file message
-        const message = {
+        // =========================
+        // 2. SEND FILE MESSAGE
+        //    TO SERVER
+        // =========================
 
-            id:
-                generateID(),
+        const messageResponse =
+            await fetch(
+                `/api/groups/${encodeURIComponent(groupId)}/messages`,
+                {
+                    method: "POST",
 
-            senderId:
-                currentUser.id,
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
 
-            senderEmail:
-                currentUser.email,
+                    body: JSON.stringify({
 
-            senderName:
-                currentUser.name,
+                        senderId:
+                            currentUser.id,
 
-            type:
-                "file",
+                        senderEmail:
+                            currentUser.email,
 
-            fileName:
-                uploadResult.fileName,
+                        senderName:
+                            currentUser.name,
 
-            fileUrl:
-                uploadResult.fileUrl,
+                        type:
+                            "file",
 
-            fileSize:
-                file.size,
+                        fileName:
+                            uploadResult.fileName,
 
-            time:
-                new Date().toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit"
-                }),
+                        fileUrl:
+                            uploadResult.fileUrl,
 
-            date:
-                new Date().toLocaleDateString(),
-
-            status:
-                "sent"
-
-        };
-
-
-        const messages =
-            loadData(groupId) || [];
+                        fileSize:
+                            file.size
+                    })
+                }
+            );
 
 
-        messages.push(message);
+        const messageResult =
+            await messageResponse.json();
 
 
-        saveData(
-            groupId,
-            messages
+        console.log(
+            "GROUP FILE MESSAGE:",
+            messageResult
         );
 
 
+        if (
+            !messageResponse.ok ||
+            !messageResult.success
+        ) {
+
+            console.error(
+                "Group file message failed:",
+                messageResult
+            );
+
+            alert(
+                messageResult.message ||
+                "Could not send group file message."
+            );
+
+            return;
+        }
+
+
+        // =========================
+        // 3. DISPLAY SERVER MESSAGE
+        // =========================
+
         createGroupMessage(
-            message
+            messageResult.message
+        );
+
+
+        console.log(
+            "Group file shared successfully."
         );
 
     }
@@ -744,9 +601,7 @@ async function sendGroupFile(file) {
         );
 
         alert(
-            "Unable to upload file."
+            "Unable to share file."
         );
-
     }
-
 }

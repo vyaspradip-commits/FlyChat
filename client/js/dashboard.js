@@ -26,7 +26,12 @@ async function loadRegisteredUsers() {
 
     const container =
         document.getElementById("chatContainer");
-
+    // Remove existing user chats before rebuilding the list
+    container
+        .querySelectorAll('.chat-item[data-chat-type="user"]')
+        .forEach(function (item) {
+            item.remove();
+        });
     if (!container) {
         console.log("chatContainer not found.");
         return;
@@ -34,8 +39,16 @@ async function loadRegisteredUsers() {
 
     try {
 
-        const response =
-            await fetch("/api/users");
+        const currentUser = getCurrentUser();
+
+        if (!currentUser) {
+            return;
+        }
+
+        const response = await fetch(
+            "/api/users?viewerId=" +
+            encodeURIComponent(currentUser.id)
+        );
 
         const result =
             await response.json();
@@ -54,14 +67,6 @@ async function loadRegisteredUsers() {
             "Registered users from server:",
             result.users
         );
-
-
-        // =========================
-        // CURRENT USER
-        // =========================
-
-        const currentUser =
-            getCurrentUser();
 
         const currentEmail =
             currentUser &&
@@ -141,8 +146,25 @@ async function loadRegisteredUsers() {
         // ADD USERS TO CHAT LIST
         // =========================
 
+        // =========================
+        // ADD USERS TO CHAT LIST
+        // =========================
+
+        const hiddenChatUsers =
+            JSON.parse(
+                localStorage.getItem("hiddenChatUsers") || "[]"
+            );
+
         result.users.forEach(function(user) {
 
+            // Don't show hidden users
+            if (
+                hiddenChatUsers.includes(
+                    user.email.toLowerCase().trim()
+                )
+            ) {
+                return;
+        }
             // Don't show yourself in your own chat list
             if (
                 currentEmail &&
@@ -150,6 +172,29 @@ async function loadRegisteredUsers() {
                 currentEmail
             ) {
                 return;
+            }
+            // =========================
+            // PRIVACY: SHOW ONLY SELECTED USERS
+            // =========================
+            const myPrivacy =
+                loadData("privacy_" + currentUser.id);
+
+            if (
+                myPrivacy &&
+                myPrivacy.visibility === "selected"
+            ) {
+
+                const allowedUsers =
+                    (myPrivacy.selectedUsers || [])
+                        .map(String);
+
+                if (
+                    !allowedUsers.includes(
+                        String(user.id)
+                    )
+                ) {
+                    return;
+                }
             }
 
 
@@ -179,7 +224,20 @@ async function loadRegisteredUsers() {
                 "data-user-email",
                 user.email
             );
+            div.dataset.userId =
+                String(user.id);
 
+            div.dataset.chatType =
+                "user";
+
+            div.dataset.chatId =
+                String(user.id);
+
+            div.dataset.lastActivity =
+                user.lastActivityAt ||
+                user.updatedAt ||
+                user.createdAt ||
+                "1970-01-01T00:00:00.000Z";
 
             div.innerHTML = `
 
@@ -569,7 +627,7 @@ function editCurrentGroup(){
         alert("Please open a group first.");
     }
     sessionStorage.setItem("editingGroupId", groupId);
-    window.location.href = "create-group.html";
+    window.location.href = "edit-group.html";
 }
 
 function updateChatHeader(name, subtitle) {
@@ -613,6 +671,106 @@ function loadChatListImages(){
         }
     });
 }
+// =========================
+// RENDER GROUP CHAT ITEM
+// =========================
+
+function renderGroupChatItem(group) {
+
+    const memberCount =
+        Array.isArray(group.members)
+            ? group.members.length
+            : 0;
+
+    const groupImage =
+        group.image ||
+        "images/user.png";
+
+    const groupName =
+        group.name ||
+        "Unnamed Group";
+
+    const groupStatus =
+        group.description &&
+        String(group.description).trim()
+            ? String(group.description).trim()
+            : "No status";
+
+    const div =
+        document.createElement("div");
+
+    div.className =
+        "chat-user group-chat-item";
+
+    div.dataset.groupId =
+        group.id;
+    div.dataset.lastActivity =
+        group.lastActivity ||
+        group.updatedAt ||
+        group.createdAt ||
+        "1970-01-01T00:00:00.000Z";
+    div.dataset.chatType = "group";
+    div.dataset.chatId = String(group.id);
+    div.dataset.lastActivity = String(group.lastActivityAt || group.updatedAt || group.createdAt || 0);
+    div.dataset.name =
+        groupName;
+
+    div.innerHTML = `
+
+        <img
+            class="chat-avatar"
+            src="${escapeHTML(groupImage)}"
+            alt="${escapeHTML(groupName)}"
+        >
+
+        <div class="chat-user-info">
+
+            <h3 class="chat-user-name">
+
+                <span class="group-icon">👥</span>
+
+                ${escapeHTML(groupName)}
+
+            </h3>
+
+            <p class="group-status">
+                ${escapeHTML(groupStatus)}
+            </p>
+
+            <p class="group-members">
+                ${memberCount} Members
+            </p>
+
+        </div>
+    `;
+
+    div.addEventListener(
+        "click",
+        function () {
+
+            if (
+                typeof openGroup ===
+                "function"
+            ) {
+
+                openGroup(
+                    group.name,
+                    group.id
+                );
+
+            } else {
+
+                console.error(
+                    "openGroup() is not defined."
+                );
+
+            }
+
+        }
+    );
+
+    return div;
+}
 
 async function loadCreatedGroups() {
 
@@ -620,7 +778,11 @@ async function loadCreatedGroups() {
         document.getElementById("chatContainer");
 
     if (!container) {
-        console.log("chatContainer not found.");
+
+        console.log(
+            "chatContainer not found."
+        );
+
         return;
     }
 
@@ -628,7 +790,11 @@ async function loadCreatedGroups() {
         getCurrentUser();
 
     if (!currentUser || !currentUser.id) {
-        console.log("Current user not found.");
+
+        console.log(
+            "Current user not found."
+        );
+
         return;
     }
 
@@ -637,13 +803,18 @@ async function loadCreatedGroups() {
         const response =
             await fetch(
                 "/api/groups?userId=" +
-                encodeURIComponent(currentUser.id)
+                encodeURIComponent(
+                    currentUser.id
+                )
             );
 
         const result =
             await response.json();
 
-        if (!response.ok || !result.success) {
+        if (
+            !response.ok ||
+            !result.success
+        ) {
 
             console.error(
                 "Could not load groups:",
@@ -659,104 +830,184 @@ async function loadCreatedGroups() {
         );
 
 
-        // =========================
-        // SYNC SERVER GROUPS
-        // TO LOCAL STORAGE
-        // =========================
+        // =========================================
+        // SERVER = SOURCE OF TRUTH
+        // =========================================
+
+        const serverGroups =
+            Array.isArray(result.groups)
+                ? result.groups
+                : [];
+
+
+        // =========================================
+        // SYNC LOCAL STORAGE
+        // =========================================
 
         saveData(
             "groups",
-            result.groups || []
+            serverGroups
         );
 
 
-        // =========================
-        // ADD GROUPS TO CHAT LIST
-        // =========================
+        // =========================================
+        // UPDATE / CREATE GROUP ITEMS
+        // =========================================
 
-        (result.groups || []).forEach(function(group) {
+        serverGroups.forEach(
+            function(group) {
 
-            if (!group || !group.id) {
-                return;
-            }
-
-
-            // Prevent duplicate group cards
-
-            const alreadyExists =
-                container.querySelector(
-                    `[data-group-id="${CSS.escape(String(group.id))}"]`
-                );
-
-            if (alreadyExists) {
-                return;
-            }
+                if (
+                    !group ||
+                    !group.id
+                ) {
+                    return;
+                }
 
 
-            const div =
-                document.createElement("div");
-
-            div.className =
-                "chat-item";
-
-            div.dataset.groupId =
-                String(group.id);
-
-            div.dataset.name =
-                group.name || "Group";
+                const groupId =
+                    String(group.id);
 
 
-            const memberCount =
-                Array.isArray(group.members)
-                    ? group.members.length
-                    : 0;
+                // =====================================
+                // GET LAST ACTIVITY
+                // =====================================
+
+                const activityTime =
+                    group.lastActivityAt ||
+                    group.updatedAt ||
+                    group.createdAt ||
+                    0;
 
 
-            div.innerHTML = `
+                // =====================================
+                // FIND EXISTING GROUP
+                // =====================================
 
-                <img
-                    class="avatar"
-                    src="${escapeHTML(
-                        group.image ||
-                        "images/user.png"
-                    )}"
-                    alt="Group">
-
-                <div class="chat-details">
-
-                    <h3>
-                        👥 ${escapeHTML(
-                            group.name ||
-                            "Group"
-                        )}
-                    </h3>
-
-                    <p>
-                        ${memberCount} Members
-                    </p>
-
-                </div>
-
-            `;
-
-
-            div.addEventListener(
-                "click",
-                function() {
-
-                    openGroup(
-                        group.name,
-                        group.id
+                const existingItem =
+                    container.querySelector(
+                        `[data-group-id="${CSS.escape(groupId)}"]`
                     );
 
+
+                // =====================================
+                // EXISTING GROUP
+                // =====================================
+
+                if (existingItem) {
+
+                    // Update activity timestamp
+                    existingItem.dataset.lastActivity =
+                        String(activityTime);
+
+                    // Update group name
+                    const nameElement =
+                        existingItem.querySelector(
+                            ".chat-user-name"
+                        );
+
+                    if (nameElement) {
+
+                        nameElement.innerHTML =
+                            `<span class="group-icon">👥</span> ` +
+                            `${escapeHTML(
+                                group.name ||
+                                "Group"
+                            )}`;
+                    }
+
+
+                    // Update group status
+                    const statusElement =
+                        existingItem.querySelector(
+                            ".group-status"
+                        );
+
+                    if (statusElement) {
+
+                        statusElement.textContent =
+                            group.description &&
+                            String(
+                                group.description
+                            ).trim()
+                                ? String(
+                                    group.description
+                                ).trim()
+                                : "No status";
+                    }
+
+
+                    // Update member count
+                    const memberElement =
+                        existingItem.querySelector(
+                            ".group-members"
+                        );
+
+                    if (memberElement) {
+
+                        const memberCount =
+                            Array.isArray(
+                                group.members
+                            )
+                                ? group.members.length
+                                : 0;
+
+                        memberElement.textContent =
+                            `${memberCount} Members`;
+                    }
+
+
+                    // Update group image
+                    const imageElement =
+                        existingItem.querySelector(
+                            ".chat-avatar"
+                        );
+
+                    if (imageElement) {
+
+                        imageElement.src =
+                            group.image ||
+                            "images/user.png";
+                    }
+
+
+                    // IMPORTANT:
+                    // DO NOT call moveChatToTop()
+                    // here.
+
+                    return;
                 }
-            );
 
 
-            container.appendChild(div);
+                // =====================================
+                // NEW GROUP
+                // =====================================
 
-        });
+                const groupItem =
+                    renderGroupChatItem(
+                        group
+                    );
 
+
+                groupItem.dataset.lastActivity =
+                    String(activityTime);
+
+
+                container.appendChild(
+                    groupItem
+                );
+
+            }
+        );
+
+
+        // =========================================
+        // IMPORTANT
+        // SORT ONLY ONCE
+        // AFTER ALL GROUPS ARE PROCESSED
+        // =========================================
+
+        reorderChatList();
 
         console.log(
             "Server groups added to dashboard."
@@ -772,7 +1023,40 @@ async function loadCreatedGroups() {
 
     }
 }
+// =========================
+// LIVE GROUP SYNCHRONIZATION
+// =========================
 
+let groupSyncTimer = null;
+
+function startGroupLiveSync() {
+
+    // Prevent multiple timers
+    if (groupSyncTimer) {
+        return;
+    }
+
+    groupSyncTimer =
+        setInterval(
+            async function() {
+
+                try {
+
+                    await loadCreatedGroups();
+
+                } catch (error) {
+
+                    console.error(
+                        "Live group sync error:",
+                        error
+                    );
+
+                }
+
+            },
+            1500
+        );
+}
 window.addEventListener("load", async function () {
 
     if (document.getElementById("chatArea")) {
@@ -833,3 +1117,599 @@ function closeMobileChat() {
         app.classList.remove("mobile-chat-open");
     }
 }
+
+function getChatActivityTime(item){
+    if (!item) {
+        return 0;
+    }
+    const value = item.dataset.lastActivity;
+    if (!value) {
+        return 0;
+    }
+    if (!isNaN(Number(value))) {
+        return Number(value);
+    }
+    const parsed = Date.parse(value);
+    return isNaN(parsed) ? 0 : parsed;
+}
+
+function moveChatToTop(chatId, chatType) {
+    const container = document.getElementById("chatContainer");
+
+    if (!container) return;
+
+    const items = [
+        ...container.querySelectorAll(".chat-item")
+    ];
+
+    const chatItem = items.find(function (item) {
+        return (
+            item.dataset.chatType === chatType &&
+            String(item.dataset.chatId) === String(chatId)
+        );
+    });
+
+    if (chatItem) {
+        container.prepend(chatItem);
+    }
+}
+function updateChatActivityAndReorder(chatType, chatId) {
+
+    const container =
+        document.getElementById("chatContainer");
+
+    if (!container || !chatId) {
+        return;
+    }
+
+    let item = null;
+
+    if (chatType === "group") {
+
+        item =
+            container.querySelector(
+                `[data-chat-type="group"][data-group-id="${CSS.escape(String(chatId))}"]`
+            );
+
+    } else {
+
+        item =
+            container.querySelector(
+                `[data-chat-type="user"][data-user-id="${CSS.escape(String(chatId))}"]`
+            );
+    }
+
+    if (!item) {
+
+        console.log(
+            "Chat item not found:",
+            chatType,
+            chatId
+        );
+
+        return;
+    }
+
+    // Newest activity
+    item.dataset.lastActivity =
+        new Date().toISOString();
+
+    // Move only inside #chatContainer
+    container.prepend(item);
+
+    console.log(
+        "Activity updated:",
+        chatType,
+        chatId
+    );
+}
+function sortChatListByActivity() {
+
+    const container =
+        document.getElementById("chatContainer");
+
+    if (!container) {
+        return;
+    }
+
+    // Get only group/chat items
+    const items =
+        Array.from(
+            container.querySelectorAll(
+                ".group-chat-item, .chat-user, .chat-item"
+            )
+        );
+
+    // Remove duplicate references
+    const uniqueItems =
+        Array.from(new Set(items));
+
+    // Sort newest activity first
+    uniqueItems.sort(function (a, b) {
+
+        const aValue =
+            a.dataset.lastActivity || "0";
+
+        const bValue =
+            b.dataset.lastActivity || "0";
+
+        const aTime =
+            Date.parse(aValue) ||
+            Number(aValue) ||
+            0;
+
+        const bTime =
+            Date.parse(bValue) ||
+            Number(bValue) ||
+            0;
+
+        return bTime - aTime;
+    });
+
+    // Put sorted items back into the container
+    uniqueItems.forEach(function (item) {
+
+        container.appendChild(item);
+
+    });
+}
+// =========================================
+// MOVE ONE CHAT TO TOP
+// ONLY INSIDE #chatContainer
+// =========================================
+
+function moveChatToTop(chatId, chatType) {
+
+    const container =
+        document.getElementById("chatContainer");
+
+    if (!container) {
+        return;
+    }
+
+    const item =
+        Array.from(
+            container.children
+        ).find(function (element) {
+
+            return (
+                element.dataset &&
+                element.dataset.chatType === chatType &&
+                String(element.dataset.chatId) === String(chatId)
+            );
+
+        });
+
+    if (!item) {
+        console.log(
+            "Chat item not found:",
+            chatType,
+            chatId
+        );
+        return;
+    }
+
+    // IMPORTANT:
+    // Move ONLY inside #chatContainer.
+    // Never use .chat-list.prepend()
+
+    container.prepend(item);
+
+    console.log(
+        "Chat moved to top:",
+        chatType,
+        chatId
+    );
+}
+
+
+// =========================================
+// MOVE USER CHAT TO TOP
+// =========================================
+
+function moveUserChatToTop(userId) {
+
+    const container =
+        document.getElementById("chatContainer");
+
+    if (!container || !userId) {
+        return;
+    }
+
+    moveChatToTop(
+        userId,
+        "user"
+    );
+
+}
+
+
+// =========================================
+// MOVE GROUP CHAT TO TOP
+// =========================================
+
+function moveGroupChatToTop(groupId) {
+
+    const container =
+        document.getElementById("chatContainer");
+
+    if (!container || !groupId) {
+        return;
+    }
+
+    moveChatToTop(
+        groupId,
+        "group"
+    );
+
+}
+
+
+// =========================================
+// UPDATE ACTIVITY + REORDER
+// =========================================
+
+function updateChatActivityAndReorder(
+    chatType,
+    chatId
+) {
+
+    const container =
+        document.getElementById("chatContainer");
+
+    if (!container || !chatId) {
+        return;
+    }
+
+    let item = null;
+
+    if (chatType === "group") {
+
+        item =
+            container.querySelector(
+                `[data-chat-type="group"][data-group-id="${CSS.escape(String(chatId))}"]`
+            );
+
+    } else {
+
+        item =
+            container.querySelector(
+                `[data-chat-type="user"][data-user-id="${CSS.escape(String(chatId))}"]`
+            );
+
+    }
+
+    if (!item) {
+
+        console.log(
+            "Chat item not found for activity update:",
+            chatType,
+            chatId
+        );
+
+        return;
+    }
+
+    item.dataset.lastActivity =
+        new Date().toISOString();
+
+    reorderChatList();
+
+}
+
+
+// =========================================
+// REORDER ENTIRE CHAT LIST
+// GLOBAL ORDER
+// USER + GROUP TOGETHER
+// NEWEST ACTIVITY = TOP
+// =========================================
+
+function reorderChatList() {
+
+    const container =
+        document.getElementById("chatContainer");
+
+    if (!container) {
+        return;
+    }
+
+    const items =
+        Array.from(
+            container.querySelectorAll(".chat-item")
+        ).filter(function (item) {
+
+            return (
+                item.dataset &&
+                (
+                    item.dataset.chatType === "user" ||
+                    item.dataset.chatType === "group"
+                )
+            );
+
+        });
+
+
+    // =========================================
+    // SORT EVERYTHING TOGETHER
+    // =========================================
+
+    items.sort(function (a, b) {
+
+        const timeA =
+            Date.parse(
+                a.dataset.lastActivity || ""
+            ) || 0;
+
+        const timeB =
+            Date.parse(
+                b.dataset.lastActivity || ""
+            ) || 0;
+
+        return timeB - timeA;
+
+    });
+
+
+    // =========================================
+    // PUT BACK INSIDE #chatContainer
+    // =========================================
+
+    items.forEach(function (item) {
+
+        container.appendChild(item);
+
+    });
+
+
+    console.log(
+        "Chat list reordered:",
+        items.map(function (item) {
+
+            return {
+                type:
+                    item.dataset.chatType,
+
+                id:
+                    item.dataset.chatId,
+
+                groupId:
+                    item.dataset.groupId,
+
+                lastActivity:
+                    item.dataset.lastActivity
+            };
+
+        })
+    );
+
+}
+function moveUserChatToTop(userId) {
+
+    const container =
+        document.getElementById("chatContainer");
+
+    if (!container || !userId) {
+        return;
+    }
+
+    const item =
+        container.querySelector(
+            `[data-user-id="${CSS.escape(String(userId))}"]`
+        );
+
+    if (!item) {
+        return;
+    }
+
+    container.prepend(item);
+}
+
+function moveGroupChatToTop(groupId) {
+
+    const container =
+        document.getElementById("chatContainer");
+
+    if (!container || !groupId) {
+        return;
+    }
+
+    const item =
+        container.querySelector(
+            `[data-group-id="${CSS.escape(String(groupId))}"]`
+        );
+
+    if (!item) {
+        return;
+    }
+
+    container.appendChild(item);
+}
+
+// =========================================
+// REORDER ENTIRE CHAT LIST
+// NEWEST ACTIVITY = TOP
+// =========================================
+
+// =========================================
+// REORDER CHAT LIST
+// DIRECT CHATS FIRST
+// NEWEST DIRECT CHAT = TOP
+// GROUPS AFTER DIRECT CHATS
+// =========================================
+
+function reorderChatList() {
+
+    const container =
+        document.getElementById("chatContainer");
+
+    if (!container) {
+        return;
+    }
+
+    // Get only actual chat/group items
+    const items =
+        Array.from(
+            container.children
+        ).filter(function (item) {
+
+            return (
+                item.dataset &&
+                (
+                    item.dataset.chatType === "user" ||
+                    item.dataset.chatType === "group"
+                )
+            );
+
+        });
+
+    // =========================================
+    // SORT ALL CHATS TOGETHER
+    // NEWEST ACTIVITY = TOP
+    // =========================================
+
+    items.sort(function (a, b) {
+
+        const timeA =
+            Date.parse(
+                a.dataset.lastActivity || ""
+            ) || 0;
+
+        const timeB =
+            Date.parse(
+                b.dataset.lastActivity || ""
+            ) || 0;
+
+        return timeB - timeA;
+    });
+
+    // =========================================
+    // PUT ITEMS BACK ONLY INSIDE CHAT CONTAINER
+    // =========================================
+
+    items.forEach(function (item) {
+
+        container.appendChild(item);
+
+    });
+
+    console.log(
+        "Chat list reordered:",
+        items.map(function (item) {
+
+            return {
+                type: item.dataset.chatType,
+                id:
+                    item.dataset.chatType === "group"
+                        ? item.dataset.groupId
+                        : item.dataset.userId,
+                lastActivity:
+                    item.dataset.lastActivity
+            };
+
+        })
+    );
+}
+// =========================================
+// RECEIVER: MOVE RECEIVED PRIVATE CHAT
+// TO TOP OF #chatContainer
+// =========================================
+
+window.addEventListener(
+    "flychat-message-received",
+    function (event) {
+
+        const data =
+            event.detail || {};
+
+        const currentUser =
+            typeof getCurrentUser === "function"
+                ? getCurrentUser()
+                : null;
+
+        if (!currentUser) {
+            return;
+        }
+
+        const senderEmail =
+            String(
+                data.senderEmail || ""
+            )
+            .trim()
+            .toLowerCase();
+
+        const receiverEmail =
+            String(
+                data.receiverEmail || ""
+            )
+            .trim()
+            .toLowerCase();
+
+        const currentUserEmail =
+            String(
+                currentUser.email || ""
+            )
+            .trim()
+            .toLowerCase();
+
+        // =====================================
+        // ONLY RECEIVER HANDLES THIS EVENT
+        // =====================================
+
+        if (
+            receiverEmail !== currentUserEmail
+        ) {
+            return;
+        }
+
+        if (!senderEmail) {
+            return;
+        }
+
+        const container =
+            document.getElementById(
+                "chatContainer"
+            );
+
+        if (!container) {
+            return;
+        }
+
+        // =====================================
+        // FIND SENDER CHAT
+        // =====================================
+
+        const item =
+            container.querySelector(
+                `[data-chat-type="user"][data-user-email="${CSS.escape(senderEmail)}"]`
+            );
+
+        if (!item) {
+
+            console.log(
+                "Received message, but sender chat is not loaded:",
+                senderEmail
+            );
+
+            return;
+        }
+
+        // =====================================
+        // UPDATE LAST ACTIVITY
+        // =====================================
+
+        item.dataset.lastActivity =
+            new Date().toISOString();
+
+        // =====================================
+        // MOVE ONLY INSIDE #chatContainer
+        // =====================================
+
+        container.prepend(item);
+
+        console.log(
+            "RECEIVER: chat moved to top:",
+            senderEmail
+        );
+    }
+);

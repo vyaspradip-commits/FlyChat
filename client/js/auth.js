@@ -1,4 +1,4 @@
-// =========================
+﻿// =========================
 // PASSWORD VALIDATION
 
 // =========================
@@ -13,7 +13,7 @@ function validatePassword(password){
 
 async function registerUserOnServer(user) {
     try{
-        const response = await fetch("/api/users/register", {
+        const response = await fetch("http://localhost:5000/api/auth/register", {
             method: "POST",
             headers: {"Content-Type": "application/json"},
             body: JSON.stringify({
@@ -93,11 +93,11 @@ async function registerUser(){
 
         showAlert(
             `Password must contain
-            ✔ 8 Characters
-            ✔ 1 Uppercase
-            ✔ 1 Lowercase
-            ✔ 1 Number
-            ✔ 1 Special Symbol`
+            âœ” 8 Characters
+            âœ” 1 Uppercase
+            âœ” 1 Lowercase
+            âœ” 1 Number
+            âœ” 1 Special Symbol`
         );
 
         return;
@@ -137,7 +137,7 @@ async function registerUser(){
         try {
 
             const response = await fetch(
-                "/api/auth/request-otp",
+                "http://localhost:5000/api/auth/request-otp",
                 {
                     method: "POST",
 
@@ -225,7 +225,7 @@ async function registerUser(){
     try {
 
         const response = await fetch(
-            "/api/users/register",
+            "http://localhost:5000/api/users/register",
             {
                 method: "POST",
 
@@ -315,105 +315,152 @@ async function registerUser(){
 // LOGIN USER
 // =========================
 
-function loginUser() {
-
-    const emailInput =
-        document.getElementById("loginEmail");
-
-    const passwordInput =
-        document.getElementById("loginPassword");
-
+async function loginUser() {
+    const emailInput = document.getElementById("loginEmail");
+    const passwordInput = document.getElementById("loginPassword");
     if (!emailInput || !passwordInput) {
         console.error("Login fields not found.");
         return;
     }
-
-    const email =
-        emailInput.value.trim().toLowerCase();
-
+    const email = emailInput.value.trim().toLowerCase();
     const password =
         passwordInput.value;
 
     if (!email || !password) {
-        showAlert("Please enter email and password.");
+
+        showAlert(
+            "Please enter email and password."
+        );
+
         return;
     }
 
-    // Get users from localStorage
-    const users =
-        loadData("users") || [];
+    try {
 
-    console.log("Login email:", email);
-    console.log("Users found:", users.length);
+        const response =
+            await fetch(
+                "http://localhost:5000/api/auth/login",
+                {
+                    method: "POST",
 
-    // Find account
-    const user =
-        users.find(function (u) {
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
 
-            return (
-                u.email &&
-                u.email.trim().toLowerCase() === email &&
-                u.password === password
+                    body: JSON.stringify({
+                        email: email,
+                        password: password
+                    })
+                }
             );
 
-        });
+        const result =
+            await response.json();
 
-    if (!user) {
+        console.log(
+            "Server login response:",
+            result
+        );
 
-        console.log("LOGIN FAILED");
 
-        showAlert("Invalid Email or Password.");
+        if (
+            !response.ok ||
+            !result.success
+        ) {
 
-        return;
+            showAlert(
+                result.message ||
+                "Invalid Email or Password."
+            );
+
+            return;
+        }
+
+
+        const user =
+            result.user;
+
+
+        // =========================
+        // CLEAR OLD SESSION
+        // =========================
+
+        sessionStorage.removeItem(
+            "loggedIn"
+        );
+
+        sessionStorage.removeItem(
+            "currentUser"
+        );
+
+        sessionStorage.removeItem(
+            "currentEmail"
+        );
+
+        sessionStorage.removeItem(
+            "currentUserId"
+        );
+
+
+        // =========================
+        // CREATE NEW SESSION
+        // =========================
+
+        sessionStorage.setItem(
+            "loggedIn",
+            "true"
+        );
+
+        sessionStorage.setItem(
+            "token",
+            result.token
+        );
+
+        sessionStorage.setItem(
+            "currentEmail",
+            user.email
+        );
+
+        sessionStorage.setItem(
+            "currentUserId",
+            user.id
+        );
+
+        sessionStorage.setItem(
+            "currentUser",
+            JSON.stringify(user)
+        );
+
+
+        console.log(
+            "LOGIN SUCCESS:",
+            user
+        );
+
+
+        // =========================
+        // OPEN DASHBOARD
+        // =========================
+
+        window.location.href =
+            "dashboard.html";
+
+
+    } catch (error) {
+
+        console.error(
+            "Login server error:",
+            error
+        );
+
+        showAlert(
+            "Unable to connect to FlyChat server."
+        );
+
     }
 
-    console.log("LOGIN USER FOUND:", user);
-
-    // Clear old session first
-    sessionStorage.removeItem("loggedIn");
-    sessionStorage.removeItem("currentUser");
-    sessionStorage.removeItem("currentEmail");
-    sessionStorage.removeItem("currentUserId");
-
-    // Create new session
-    sessionStorage.setItem(
-        "loggedIn",
-        "true"
-    );
-
-    sessionStorage.setItem(
-        "currentEmail",
-        user.email
-    );
-
-    sessionStorage.setItem(
-        "currentUserId",
-        user.id
-    );
-
-    sessionStorage.setItem(
-        "currentUser",
-        JSON.stringify(user)
-    );
-
-    console.log(
-        "LOGIN SUCCESS"
-    );
-
-    console.log(
-        "loggedIn:",
-        sessionStorage.getItem("loggedIn")
-    );
-
-    console.log(
-        "currentUser:",
-        sessionStorage.getItem("currentUser")
-    );
-
-    // Open dashboard
-    window.location.href ="dashboard.html";
 }
-
 
 // =========================
 // LOGOUT
@@ -440,7 +487,9 @@ function logout() {
     sessionStorage.removeItem(
         "currentUserId"
     );
-
+    sessionStorage.removeItem(
+        "token"
+    );
     window.location.href =
         "login.html";
 }
@@ -461,7 +510,7 @@ function checkLogin() {
 
     if (loggedIn !== "true") {
 
-        console.log("❌ LOGIN STATUS NOT FOUND");
+        console.log("âŒ LOGIN STATUS NOT FOUND");
 
         window.location.href = "login.html";
         return false;
@@ -469,7 +518,7 @@ function checkLogin() {
 
     if (!currentUserJSON) {
 
-        console.log("❌ CURRENT USER NOT FOUND");
+        console.log("âŒ CURRENT USER NOT FOUND");
 
         window.location.href = "login.html";
         return false;
@@ -483,7 +532,7 @@ function checkLogin() {
 
     } catch (error) {
 
-        console.error("❌ CURRENT USER JSON ERROR:", error);
+        console.error("âŒ CURRENT USER JSON ERROR:", error);
 
         sessionStorage.removeItem("currentUser");
 
@@ -493,13 +542,13 @@ function checkLogin() {
 
     if (!currentUser.id || !currentUser.email) {
 
-        console.log("❌ INVALID CURRENT USER:", currentUser);
+        console.log("âŒ INVALID CURRENT USER:", currentUser);
 
         window.location.href = "login.html";
         return false;
     }
 
-    console.log("✅ LOGIN VALID");
+    console.log("âœ… LOGIN VALID");
     console.log("User:", currentUser.name);
     console.log("Email:", currentUser.email);
     console.log("ID:", currentUser.id);
@@ -533,7 +582,7 @@ function togglePassword(
         input.type = "text";
 
         button.innerHTML =
-            "🙈";
+            "ðŸ™ˆ";
 
     }
     else{
@@ -541,7 +590,7 @@ function togglePassword(
         input.type = "password";
 
         button.innerHTML =
-            "👁";
+            "ðŸ‘";
 
     }
 

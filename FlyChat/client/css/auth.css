@@ -1,0 +1,120 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #f1f5f9;
+}
+
+.auth-container {
+    width: 100%;
+    padding: 20px;
+}
+
+.auth-box {
+    width: 100%;
+    max-width: 420px;
+    margin: auto;
+    padding: 35px;
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.auth-box h1 {
+    text-align: center;
+    color: #4f46e5;
+    font-size: 34px;
+}
+
+.subtitle {
+    text-align: center;
+    color: #64748b;
+    margin-top: 5px;
+    margin-bottom: 30px;
+}
+
+.auth-box h2 {
+    margin-bottom: 25px;
+    color: #1e293b;
+}
+
+.input-group {
+    margin-bottom: 20px;
+}
+
+.input-group label {
+    display: block;
+    margin-bottom: 7px;
+    color: #334155;
+    font-weight: bold;
+}
+
+.input-group input {
+    width: 100%;
+    padding: 13px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 15px;
+    outline: none;
+}
+
+.input-group input:focus {
+    border-color: #4f46e5;
+}
+
+button {
+    width: 100%;
+    padding: 13px;
+    border: none;
+    border-radius: 8px;
+    background: #4f46e5;
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #4338ca;
+}
+
+.account-text {
+    text-align: center;
+    margin-top: 22px;
+    color: #64748b;
+}
+
+.account-text a {
+    color: #4f46e5;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+#message {
+    margin-top: 15px;
+    text-align: center;
+}
+
+.forgot-link {
+    text-align: right;
+    margin-top: -10px;
+    margin-bottom: 20px;
+}
+
+.forgot-link a {
+    color: #4f46e5;
+    text-decoration: none;
+    font-size: 14px;
+}
+
+.forgot-link a:hover {
+    text-decoration: underline;
+}

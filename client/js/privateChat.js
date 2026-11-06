@@ -2,10 +2,12 @@
 // GET CURRENT CHAT USER
 // =========================
 let currentPrivateChatUser = null;
+
 function getChatUser() {
     if (currentPrivateChatUser) {
         return currentPrivateChatUser;
     }
+
     const users = loadData("users") || [];
     const chatTitle = document.getElementById("chatTitle");
 
@@ -79,8 +81,11 @@ async function loadPrivateMessages() {
 
         box.scrollTop = box.scrollHeight;
 
-        // Status updates are separate from rendering.
-        // They do not clear/rebuild the chat every 2 seconds.
+
+        // =========================
+        // MARK MESSAGES DELIVERED
+        // =========================
+
         await fetch("/api/chat/delivered", {
             method: "POST",
             headers: {
@@ -92,6 +97,10 @@ async function loadPrivateMessages() {
             })
         });
 
+        // =========================
+        // MARK MESSAGES READ
+        // =========================
+
         await fetch("/api/chat/read", {
             method: "POST",
             headers: {
@@ -102,6 +111,7 @@ async function loadPrivateMessages() {
                 senderEmail: chatUser.email
             })
         });
+
     } catch (error) {
         console.error("Load messages error:", error);
     }
@@ -154,8 +164,21 @@ async function sendMessage() {
         }
 
         input.value = "";
+
         await loadPrivateMessages();
+
+        const chatUserId =
+            chatUser.id ||
+            chatUser._id ||
+            chatUser.email;
+
+        updateChatActivityAndReorder(
+            "user",
+            chatUserId
+        );
+
         input.focus();
+
     } catch (error) {
         console.error("Send message error:", error);
         alert("Unable to connect to FlyChat server.");
@@ -418,36 +441,61 @@ async function refreshMessageStatus() {
         }
 
         (result.messages || []).forEach(function (message) {
-            const messageId = String(message.id || message._id || "");
+
+            const messageId =
+                String(
+                    message.id ||
+                    message._id ||
+                    ""
+                );
 
             if (!messageId) {
                 return;
             }
 
-            const existingMessage = box.querySelector(
-                `[data-message-id="${messageId}"]`
-            );
+            const existingMessage =
+                box.querySelector(
+                    `[data-message-id="${messageId}"]`
+                );
 
-            // Add only genuinely new messages.
+
+            // =========================
+            // ADD ONLY NEW MESSAGES
+            // =========================
+
             if (!existingMessage) {
                 createPrivateMessage(message);
                 return;
             }
 
-            // Update only the status ticks of our existing message.
+
+            // =========================
+            // UPDATE ONLY OUR STATUS
+            // =========================
+
             const isMine =
-                String(message.senderEmail || "").toLowerCase() ===
-                String(currentUser.email || "").toLowerCase();
+                String(
+                    message.senderEmail || ""
+                ).toLowerCase() ===
+                String(
+                    currentUser.email || ""
+                ).toLowerCase();
 
             if (!isMine) {
                 return;
             }
 
-            const status = existingMessage.querySelector(".message-status");
+            const status =
+                existingMessage.querySelector(
+                    ".message-status"
+                );
 
             if (status) {
+
                 status.textContent =
-                    message.status === "sent" ? "✓" : "✓✓";
+                    message.status === "sent"
+                        ? "✓"
+                        : "✓✓";
 
                 status.classList.toggle(
                     "read",
@@ -455,15 +503,23 @@ async function refreshMessageStatus() {
                 );
             }
         });
+
     } catch (error) {
-        console.error("Message status refresh error:", error);
+        console.error(
+            "Message status refresh error:",
+            error
+        );
     }
 }
 
 
-// Run status checking every 2 seconds without rebuilding the chat.
 setInterval(function () {
-    if (currentChat && currentChatType === "private") {
+
+    if (
+        currentChat &&
+        currentChatType === "private"
+    ) {
         refreshMessageStatus();
     }
+
 }, 2000);

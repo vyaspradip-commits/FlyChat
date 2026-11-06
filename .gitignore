@@ -1,4 +1,71 @@
+# Dependencies
 node_modules/
+**/node_modules/
+
+# Environment variables and secrets
+.env*
+!.env.example
+
+# Uploaded user files
 uploads/
+**/uploads/
+
+# Local application databases
 chat-data.json
-.env
+users-data*.json
+groups-data.json
+group-messages-data.json
+password-reset-data.json
+privacy-data.json
+.data/
+
+# Firebase credentials
+serviceAccount*.json
+firebase-adminsdk*.json
+
+# Logs
+*.log
+npm-debug.log*
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Local backup files
+server_backup*.js
+server_before*.js
+
+# Additional backup files
+server_*backup*.js
+*_backup*.js
+server_before*.js
+
+# Generated project structure listing
+structure.txt
+
+# Secret configuration files
+*.enc
+
+# Generated file listing
+backend/project-files.txt
+
+# Additional local database backups
+users-data-backup*.json
+users-data_backup*.json
+users-data_before*.json
+
+# Additional backup files
+*_backup*.js
+*_backup*.json
+*_before_*.js
+*_before_*.json
+
+# Private keys and certificates
+*.pem
+*.key
+*.p12
+*.pfx
+
+# IDE and editor files
+.vscode/
+.idea/

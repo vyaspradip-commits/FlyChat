@@ -254,20 +254,20 @@ async function verifyOtp() {
     }
 }
 
-async function resendOtp() { 
+async function resendOtp() {
     const message = document .getElementById("otpMessage");
     const pendingData = sessionStorage.getItem( "pendingRegistration" );
     if (!pendingData) {
         message.textContent = "Registration details not found. Please register again.";
-        return; 
+        return;
     }
     const registration = JSON.parse(pendingData);
-    try { 
+    try {
         const response = await fetch( "/api/auth/request-otp", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
-            }, 
+            },
             body: JSON.stringify({
                 email: registration.email
             })

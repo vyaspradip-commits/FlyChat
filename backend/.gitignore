@@ -1,0 +1,8 @@
+node_modules/
+.env
+firebase-key.json
+*-firebase-adminsdk-*.json
+uploads/*
+!uploads/.gitkeep
+.DS_Store
+npm-debug.log*

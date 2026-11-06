@@ -1,0 +1,2 @@
+const r=require("express").Router();const c=require("../controllers/uploadController");const {verifyToken}=require("../middleware/authMiddleware");const {upload}=require("../middleware/uploadMiddleware");
+r.post("/image",verifyToken,upload.single("image"),c.uploadImage);r.post("/file",verifyToken,upload.single("file"),c.uploadFile);r.get("/files",verifyToken,c.getFiles);r.get("/:fileId",verifyToken,c.getFileById);r.delete("/:fileId",verifyToken,c.deleteFile);module.exports=r;

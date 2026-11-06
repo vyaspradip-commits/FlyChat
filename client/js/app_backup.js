@@ -116,7 +116,7 @@ function addMessage(text,time,date){
         <div>
             ${text}
         </div>
-        
+
         ${
             time ?
             `<small class="message-time">

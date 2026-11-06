@@ -7,7 +7,7 @@ function getCurrentGroup() {
         return null;
     }
     const group = groups.find(function (g){
-        return g.id === currentGroupId; 
+        return g.id === currentGroupId;
     });
 
     if (!group) {

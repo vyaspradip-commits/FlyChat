@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en-US" translate="no">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0">
+    <meta name="google" content="notranslate">
+    <meta http-equiv="Content-Language" content="en-US">
+    <title>Edit Group | FlyChat</title>
+
+    <link
+        rel="stylesheet"
+        href="css/style.css">
+
+    <link
+        rel="stylesheet"
+        href="css/whatsapp.css">
+
+    <link rel="stylesheet" href="css/edit-group.css">
+
+</head>
+
+<body>
+
+    <div class="edit-group-page">
+
+        <div class="edit-group-container">
+
+            <h1 id="editGroupTitle">
+                Edit Group
+            </h1>
+
+            <div class="group-image-section">
+
+                <img
+                    id="editGroupImage"
+                    class="group-image-preview"
+                    src="images/user.png"
+                    alt="Group profile">
+
+                <input
+                    type="file"
+                    id="editGroupImageUpload"
+                    accept="image/*"
+                    hidden>
+
+                <button
+                    type="button"
+                    onclick="document.getElementById('editGroupImageUpload').click()">
+                    📷 Change Group Image
+                </button>
+
+            </div>
+
+            <div class="form-group">
+
+                <label for="editGroupName">
+                    Group Name
+                </label>
+
+                <input
+                    type="text"
+                    id="editGroupName"
+                    placeholder="Enter group name"
+                    maxlength="50">
+
+            </div>
+
+            <div class="form-group">
+
+                <label for="editGroupDescription">
+                    Group Description
+                </label>
+
+                <textarea
+                    id="editGroupDescription"
+                    placeholder="Enter group description"
+                    maxlength="200"></textarea>
+
+            </div>
+
+            <h2>👥 Group Members</h2>
+
+            <div
+                id="editMemberList"
+                class="member-list">
+            </div>
+
+            <div class="group-form-buttons">
+
+                <button
+                    type="button"
+                    onclick="saveEditedGroup()">
+                    💾 Save Changes
+                </button>
+
+                <button
+                    type="button"
+                    onclick="cancelEditGroup()">
+                    Cancel
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <script src="js/utils.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/editGroup.js"></script>
+
+</body>
+
+</html>
